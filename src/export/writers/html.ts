@@ -1,5 +1,5 @@
 import { exportFilename } from "../naming";
-import { renderChatHtml } from "../render-chat-html";
+import { renderChatHtml, type HtmlPart } from "../render-chat-html";
 import type { Writer } from "./index";
 
 // Base64 per block: a multiple of 3 bytes so blocks concatenate, and small enough that no single string
@@ -21,7 +21,8 @@ export const htmlWriter: Writer = {
   limits: { warnBytes: 200 * 1024 * 1024, maxBytes: 500 * 1024 * 1024, hint: "Select fewer large files, or export as ZIP." },
   async write(b, onProgress) {
     const parts = renderChatHtml(b);
-    const blobs = parts.flatMap((p) => (typeof p !== "string" && b.media.has(p.media) ? [b.media.get(p.media)!] : []));
+    const blobOf = (p: Exclude<HtmlPart, string>) => (p.from === "media" ? b.media : b.avatars)?.get(p.key);
+    const blobs = parts.flatMap((p) => (typeof p === "string" ? [] : (blobOf(p) ?? [])));
     const total = blobs.reduce((sum, blob) => sum + blob.size, 0);
     let done = 0;
     let last = -1;
@@ -36,7 +37,7 @@ export const htmlWriter: Writer = {
         out.push(p);
         continue;
       }
-      const blob = b.media.get(p.media);
+      const blob = blobOf(p);
       if (!blob) continue;
       // Firefox content scripts: page-world bytes deny `.constructor`; a structuredClone made here is our own.
       const bytes = new Uint8Array(structuredClone(await blob.arrayBuffer()));

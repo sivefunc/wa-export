@@ -150,7 +150,7 @@ describe("renderChatHtml", () => {
     const { parts, doc } = render(bundle([r]));
     const img = doc.querySelector("img.photo")!;
     const placeholder = parts.find((p) => typeof p !== "string") as Exclude<HtmlPart, string>;
-    expect(placeholder).toEqual({ media: "media/001-photo.jpg", id: img.getAttribute("data-media"), mime: "image/jpeg" });
+    expect(placeholder).toEqual({ from: "media", key: "media/001-photo.jpg", id: img.getAttribute("data-media"), mime: "image/jpeg" });
     expect(doc.querySelector(`script[data-for="${placeholder.id}"]`)).not.toBeNull();
     expect(img.getAttribute("data-mime")).toBe("image/jpeg");
     expect(doc.querySelector(".msg .text")!.textContent).toBe("look06:34 AM");
@@ -207,5 +207,52 @@ describe("renderChatHtml", () => {
     const { doc } = render(bundle([del, poll]));
     const texts = [...doc.querySelectorAll(".text.deleted")].map((t) => t.firstChild!.textContent);
     expect(texts).toEqual(["🚫 This message was deleted", "Unsupported message (poll_creation): can't be exported yet"]);
+  });
+});
+
+describe("renderChatHtml profile pictures", () => {
+  const ana = { jid: "123@lid", name: "Ana" };
+  const luis = { jid: "456@lid", name: "Luis" };
+  const jpg = () => new Blob([new Uint8Array([1])], { type: "image/jpeg" });
+  const placeholders = (parts: HtmlPart[]) => parts.filter((p): p is Exclude<HtmlPart, string> => typeof p !== "string");
+
+  it("shows the chat's picture in the header, or its initial without one", () => {
+    const withPic = render(bundle([record({ timestamp: T })], { avatars: new Map([["120363@g.us", jpg()]]) }));
+    const img = withPic.doc.querySelector("header img.avatar")!;
+    expect(placeholders(withPic.parts)).toContainEqual({ from: "avatars", key: "120363@g.us", id: img.getAttribute("data-media"), mime: "image/jpeg" });
+    const without = render(bundle([record({ timestamp: T })]));
+    expect(without.doc.querySelector("header img")).toBeNull();
+    expect(without.doc.querySelector("header .avatar")!.textContent).toBe("F");
+  });
+
+  it("in groups, puts the sender's picture beside the first bubble of each run", () => {
+    const { doc } = render(
+      bundle([record({ timestamp: T, sender: ana }), record({ timestamp: T, sender: ana }), record({ timestamp: T, sender: luis }), record({ timestamp: T, fromMe: true })], {
+        avatars: new Map([["123@lid", jpg()]]),
+      }),
+    );
+    const rows = [...doc.querySelectorAll(".row")];
+    expect(rows[0].querySelector("img.pp")).not.toBeNull();
+    expect(rows[1].querySelector(".pp")).toBeNull();
+    expect(rows[1].classList.contains("indent")).toBe(true);
+    expect(rows[2].querySelector(".pp.initial")!.textContent).toBe("L");
+    expect(rows[3].querySelector(".pp")).toBeNull();
+    expect(rows[3].classList.contains("indent")).toBe(false);
+  });
+
+  it("embeds each picture once however often it is shown", () => {
+    const { parts, doc } = render(
+      bundle([record({ timestamp: T, sender: ana }), record({ timestamp: T, sender: luis }), record({ timestamp: T, sender: ana })], {
+        avatars: new Map([["123@lid", jpg()]]),
+      }),
+    );
+    expect(doc.querySelectorAll("img.pp")).toHaveLength(2);
+    expect(placeholders(parts).filter((p) => p.key === "123@lid")).toHaveLength(1);
+  });
+
+  it("1:1 chats show no pictures beside bubbles", () => {
+    const { doc } = render(bundle([record({ timestamp: T, sender: ana })], { chat: { jid: "123@lid", name: "Ana" }, avatars: new Map([["123@lid", jpg()]]) }));
+    expect(doc.querySelector(".pp")).toBeNull();
+    expect(doc.querySelector("header img.avatar")).not.toBeNull();
   });
 });
