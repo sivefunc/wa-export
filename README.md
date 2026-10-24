@@ -2,7 +2,7 @@
 
 [![CI](https://github.com/sivefunc/wa-export/actions/workflows/ci.yml/badge.svg)](https://github.com/sivefunc/wa-export/actions/workflows/ci.yml)
 
-Select messages in WhatsApp Web the way you would to forward them, click **Export**, and get a ZIP with the conversation and every file. Made for dragging into Claude Code.
+Select messages in WhatsApp Web the way you would to forward them, click **Export**, and get a ZIP with the conversation and every file. Made for dragging into Claude Code. Or get a single HTML page that looks like WhatsApp, to read, share or save as PDF.
 
 Chrome/Chromium 111+ and Firefox 128+. Everything runs locally; see [PRIVACY.md](PRIVACY.md).
 
@@ -24,6 +24,14 @@ Chrome/Chromium 111+ and Firefox 128+. Everything runs locally; see [PRIVACY.md]
 ```
 
 Albums export every photo. A reply to a file keeps the reply text plus a mention such as `_(Video)_`; the quoted file itself is only included if you select it too.
+
+## HTML (WhatsApp look)
+
+In the extension's options, set **Export format** to **HTML (WhatsApp look)**. Export then downloads one `.html` file that opens in any browser and shows the selected messages as WhatsApp Web does: bubbles, sender names, replies, formatting, day separators, light and dark themes. Photos and stickers are shown inline, voice notes and videos play, and documents download from their card. Everything is inside the file; it loads nothing from the network.
+
+**Save as PDF** in the page's header opens the print dialog; choose "Save as PDF" there.
+
+Files are embedded as base64, so the page is about a third larger than the media. Exports over 200 MB ask first, and over 500 MB use ZIP instead.
 
 ## Install
 
