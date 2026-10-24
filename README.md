@@ -10,7 +10,7 @@ Chrome/Chromium 111+ and Firefox 128+. Everything runs locally; see [PRIVACY.md]
 
 1. Open a chat in WhatsApp Web → ⋮ → **Select messages**.
 2. Tick the messages you want. Scrolling is fine; ticks out of view are kept.
-3. Click **Export N**, next to Forward in the selection toolbar.
+3. Click **Export N**, next to Forward in the selection toolbar. The ⚙ button beside it picks the format (ZIP or HTML) and the message order; it's the same setting as the extension's options page.
 4. Drag the downloaded ZIP into Claude Code.
 
 ## What's in the ZIP
@@ -27,7 +27,7 @@ Albums export every photo. A reply to a file keeps the reply text plus a mention
 
 ## HTML (WhatsApp look)
 
-In the extension's options, set **Export format** to **HTML (WhatsApp look)**. Export then downloads one `.html` file that opens in any browser and shows the selected messages as WhatsApp Web does: bubbles, profile pictures, sender names, replies, formatting, day separators, light and dark themes. Photos and stickers are shown inline, voice notes and videos play, and documents download from their card. Everything is inside the file; it loads nothing from the network.
+Click ⚙ next to **Export** (or open the extension's options) and set **Export format** to **HTML (WhatsApp look)**. Export then downloads one `.html` file that opens in any browser and shows the selected messages as WhatsApp Web does: bubbles, profile pictures, sender names, replies, formatting, day separators, light and dark themes. Photos and stickers are shown inline, voice notes and videos play, and documents download from their card. Everything is inside the file; it loads nothing from the network.
 
 Profile pictures are the small ones WhatsApp shows in chat lists: the chat's in the header and, in groups, each sender's beside their messages. People without a picture, or who hide it from you, get their initial, as in WhatsApp.
 
