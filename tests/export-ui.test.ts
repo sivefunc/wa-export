@@ -216,6 +216,28 @@ describe("settings menu", () => {
     vi.useRealTimers();
   });
 
+  it("clicking an item whose submenu is already open keeps it open", async () => {
+    setup();
+    await open();
+    vi.useFakeTimers();
+    items()[0].dispatchEvent(new MouseEvent("mouseover", { bubbles: true, composed: true }));
+    vi.advanceTimersByTime(200);
+    expect(sub()).not.toBeNull();
+    items()[0].click();
+    expect(sub()!.getAttribute("aria-label")).toBe("Format");
+    expect(active()!.getAttribute("role")).toBe("menuitemradio");
+  });
+
+  it("a click before the hover delay opens the submenu once, and the hover timer doesn't close it", async () => {
+    setup();
+    await open();
+    vi.useFakeTimers();
+    items()[0].dispatchEvent(new MouseEvent("mouseover", { bubbles: true, composed: true }));
+    items()[0].click();
+    vi.advanceTimersByTime(200);
+    expect(sub()!.getAttribute("aria-label")).toBe("Format");
+  });
+
   it("choosing an option saves it and closes the menu, like WhatsApp", async () => {
     const { saved } = setup();
     await open();
@@ -291,5 +313,82 @@ describe("settings menu", () => {
     setup();
     const css = shadowOf().querySelector("style")!.textContent!;
     for (const v of ["--WDS-surface-default", "--WDS-content-default", "--WDS-accent", "--WDS-surface-highlight-RGB"]) expect(css).toContain(`var(${v}`);
+  });
+});
+
+describe("settings menu motion", () => {
+  afterEach(() => vi.useRealTimers());
+
+  function setup() {
+    const ui = mountExportUi(
+      document,
+      { load: async () => ({ format: "zip", order: "date" }), save: async () => {} },
+      { motion: true },
+    );
+    ui.setState({ kind: "idle", count: 2 });
+    return ui;
+  }
+  const gear = () => shadowOf().querySelector<HTMLButtonElement>("button.settings")!;
+  const menu = () => shadowOf().querySelector<HTMLElement>(".menu");
+  const flush = () => new Promise((r) => setTimeout(r, 0));
+
+  it("the gear turns and the menu grows in when opening, once", async () => {
+    const ui = setup();
+    gear().click();
+    await flush();
+    expect(gear().classList.contains("turn-open")).toBe(true);
+    expect(menu()!.classList.contains("enter")).toBe(true);
+    ui.setState({ kind: "idle", count: 3 }); // a redraw doesn't replay the animation
+    expect(gear().classList.contains("turn-open")).toBe(false);
+    expect(menu()!.classList.contains("enter")).toBe(false);
+  });
+
+  it("the submenu grows in when it opens", async () => {
+    setup();
+    gear().click();
+    await flush();
+    shadowOf().querySelector<HTMLButtonElement>("[data-sub=format]")!.click();
+    expect(shadowOf().querySelector(".submenu")!.classList.contains("enter")).toBe(true);
+    expect(menu()!.classList.contains("enter")).toBe(false);
+  });
+
+  it("closing turns the gear back and fades the menu out before removing it", async () => {
+    setup();
+    gear().click();
+    await flush();
+    vi.useFakeTimers();
+    gear().click();
+    expect(gear().classList.contains("turn-close")).toBe(true);
+    expect(menu()!.classList.contains("leave")).toBe(true);
+    vi.advanceTimersByTime(200);
+    expect(menu()).toBeNull();
+  });
+
+  it("reopening while the menu fades out keeps it", async () => {
+    setup();
+    gear().click();
+    await flush();
+    vi.useFakeTimers();
+    gear().click();
+    vi.useRealTimers();
+    gear().click();
+    await flush();
+    await new Promise((r) => setTimeout(r, 250));
+    expect(menu()).not.toBeNull();
+    expect(menu()!.classList.contains("leave")).toBe(false);
+  });
+
+  it("result panels animate in when they appear", () => {
+    const ui = setup();
+    ui.setState({ kind: "done", messages: 1, problems: [] });
+    expect(shadowOf().querySelector(".panel")!.classList.contains("enter")).toBe(true);
+  });
+
+  it("without motion nothing animates", async () => {
+    const ui = mountExportUi(document, { load: async () => ({ format: "zip", order: "date" }), save: async () => {} });
+    ui.setState({ kind: "idle", count: 1 });
+    gear().click();
+    await flush();
+    expect(shadowOf().querySelector(".enter, .turn-open")).toBeNull();
   });
 });
