@@ -1,11 +1,11 @@
 // The HTML export: one self-contained page that looks like WhatsApp Web. Media bytes are not part of the
-// markup; the page carries { media } placeholders that the writer fills with base64 blocks.
+// markup; the page carries placeholders (a media path or an avatar jid) that the writer fills with base64 blocks.
 import type { ExportBundle, ExportRecord, MediaKind } from "../types";
 import { mediaKindLabel, problemText } from "./problems";
 import { problemLines } from "./render-chat-md";
 import { escapeHtml, whatsappToHtml } from "./wa-html";
 
-export type HtmlPart = string | { media: string; id: string; mime: string };
+export type HtmlPart = string | { from: "media" | "avatars"; key: string; id: string; mime: string };
 
 export interface HtmlOptions {
   locale?: string; // dates and times; undefined = the browser's
@@ -63,9 +63,27 @@ export function renderChatHtml(b: ExportBundle, o: HtmlOptions = {}): HtmlPart[]
 
   const mediaId = (path: string, mime: string) => {
     const id = `m${media.length + 1}`;
-    media.push({ media: path, id, mime });
+    media.push({ from: "media", key: path, id, mime });
     return id;
   };
+  const avatarIds = new Map<string, string>();
+
+  /** A round picture, embedded once per jid, or the initial on a colored circle like WhatsApp's default. */
+  function avatarHtml(jid: string | null, name: string, cls: string, color: string): string {
+    const blob = jid ? b.avatars?.get(jid) : undefined;
+    if (jid && blob) {
+      const mime = blob.type || "image/jpeg";
+      let id = avatarIds.get(jid);
+      if (!id) {
+        id = `m${media.length + 1}`;
+        media.push({ from: "avatars", key: jid, id, mime });
+        avatarIds.set(jid, id);
+      }
+      return `<img class="${cls}" data-media="${id}" data-mime="${escapeHtml(mime)}" alt="">`;
+    }
+    const initial = [...name.replace(/^[^\p{L}\p{N}]+/u, "")][0]?.toUpperCase() ?? "?";
+    return `<span class="${cls} initial" style="background:${color}">${escapeHtml(initial)}</span>`;
+  }
 
   function mediaHtml(r: ExportRecord): string {
     const m = r.exportedMedia;
@@ -141,12 +159,14 @@ export function renderChatHtml(b: ExportBundle, o: HtmlOptions = {}): HtmlPart[]
     body.push(`<span class="meta${overlay ? " overlay" : ""}">${time}</span>`);
 
     const cls = ["msg", side, first ? "first" : "", bare ? "bare" : ""].filter(Boolean).join(" ");
-    return `<div class="row ${side}"><div class="${cls}" data-id="${escapeHtml(r.id)}">${body.join("")}</div></div>`;
+    // Groups: other people's bubbles leave room for a picture, shown on the first bubble of each run.
+    const indent = isGroup && !r.fromMe;
+    const pp = indent && first ? avatarHtml(r.sender.jid, senderName(r), "pp", colorFor(colorKey(r))) : "";
+    return `<div class="row ${side}${indent ? " indent" : ""}">${pp}<div class="${cls}" data-id="${escapeHtml(r.id)}">${body.join("")}</div></div>`;
   }
 
   const title = b.chat.name || "WhatsApp chat";
   const exported = `${new Date(b.exportedAt).toLocaleDateString(o.locale, { day: "numeric", month: "long", year: "numeric" })}, ${timeOf(Math.floor(b.exportedAt.getTime() / 1000))}`;
-  const initial = [...(b.chat.name || "?").replace(/^[^\p{L}\p{N}]+/u, "")][0]?.toUpperCase() ?? "?";
 
   push(`<!doctype html>
 <html lang="${escapeHtml(o.locale ?? "en")}">
@@ -160,7 +180,7 @@ export function renderChatHtml(b: ExportBundle, o: HtmlOptions = {}): HtmlPart[]
 </head>
 <body>
 <header class="top">
-  <div class="avatar" style="background:${colorFor(title)}">${escapeHtml(initial)}</div>
+  ${avatarHtml(b.chat.jid, b.chat.name || "?", "avatar", colorFor(title))}
   <div class="who"><div class="chat-name">${escapeHtml(title)}</div><div class="sub">${plural(b.records.length, "message")} · exported ${escapeHtml(exported)}</div></div>
   <button type="button" id="print" title="Opens the print dialog; choose “Save as PDF”">Save as PDF</button>
 </header>
@@ -225,10 +245,11 @@ body {
   position: sticky; top: 0; z-index: 2; display: flex; align-items: center; gap: 12px;
   height: 59px; padding: 0 16px; background: var(--panel); border-bottom: 1px solid rgba(134, 150, 160, .15);
 }
-.avatar {
-  flex: none; width: 40px; height: 40px; border-radius: 50%; display: grid; place-items: center;
-  color: #fff; font-size: 18px; font-weight: 500;
-}
+.avatar, .pp { flex: none; border-radius: 50%; object-fit: cover; }
+.avatar { width: 40px; height: 40px; font-size: 18px; }
+.initial { display: grid; place-items: center; color: #fff; font-weight: 500; }
+.row.indent { position: relative; padding-left: 38px; }
+.pp { position: absolute; left: 0; top: 10px; width: 28px; height: 28px; font-size: 13px; }
 .who { flex: 1; min-width: 0; }
 .chat-name { font-size: 16px; line-height: 21px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .sub { font-size: 13px; line-height: 20px; color: var(--muted); }
@@ -327,17 +348,21 @@ const SCRIPT = `
     if (!blocks.has(s.dataset.for)) blocks.set(s.dataset.for, []);
     blocks.get(s.dataset.for).push(s);
   }
+  const urls = new Map();
   for (const el of document.querySelectorAll("[data-media]")) {
-    const chunks = (blocks.get(el.dataset.media) || []).map((s) => {
-      const bin = atob(s.textContent.trim());
-      const bytes = new Uint8Array(bin.length);
-      for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
-      s.textContent = "";
-      return bytes;
-    });
-    if (!chunks.length) continue;
-    const url = URL.createObjectURL(new Blob(chunks, { type: el.dataset.mime }));
-    el.tagName === "A" ? (el.href = url) : (el.src = url);
+    const id = el.dataset.media;
+    if (!urls.has(id)) {
+      const chunks = (blocks.get(id) || []).map((s) => {
+        const bin = atob(s.textContent.trim());
+        const bytes = new Uint8Array(bin.length);
+        for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+        s.textContent = "";
+        return bytes;
+      });
+      urls.set(id, chunks.length ? URL.createObjectURL(new Blob(chunks, { type: el.dataset.mime })) : null);
+    }
+    const url = urls.get(id);
+    if (url) el.tagName === "A" ? (el.href = url) : (el.src = url);
   }
   const box = document.getElementById("lightbox");
   document.addEventListener("click", (e) => {

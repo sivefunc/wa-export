@@ -56,6 +56,24 @@ describe("html writer", () => {
     expect([...seen].sort((a, b) => a - b)).toEqual(seen);
   });
 
+  it("fills profile pictures from bundle.avatars and decodes each once", async () => {
+    const b = bundle(new Uint8Array([1, 2, 3]));
+    b.records = [record({ text: "a", sender: { jid: "123@lid", name: "Ana" } }), record({ text: "b", sender: { jid: "456@lid", name: "Luis" } }), record({ text: "c", sender: { jid: "123@lid", name: "Ana" } })];
+    b.avatars = new Map([["123@lid", new Blob([new Uint8Array([5, 6])], { type: "image/jpeg" })]]);
+    const html = await (await getWriter("html").write(b)).blob.text();
+    const made: Blob[] = [];
+    const dom = new JSDOM(html, {
+      runScripts: "dangerously",
+      beforeParse(window) {
+        window.URL.createObjectURL = (blob: Blob) => (made.push(blob), `blob:test/${made.length}`);
+      },
+    });
+    const pics = [...dom.window.document.querySelectorAll("img.pp")];
+    expect(pics.map((i) => i.getAttribute("src"))).toEqual(["blob:test/1", "blob:test/1"]);
+    expect(made).toHaveLength(1);
+    expect([...new Uint8Array(await made[0].arrayBuffer())]).toEqual([5, 6]);
+  });
+
   it("the page's script turns the blocks into a Blob URL on the photo", async () => {
     const bytes = new Uint8Array([0xff, 0xd8, 0xff, 0xe0, 9, 8, 7]);
     const html = await (await getWriter("html").write(bundle(bytes))).blob.text();
