@@ -101,8 +101,9 @@ export function renderChatHtml(b: ExportBundle, o: HtmlOptions = {}): HtmlPart[]
       const q = r.quoted;
       const who = q.fromMe ? "You" : (q.senderName ?? "Unknown");
       const color = q.fromMe ? "var(--you)" : colorFor(q.senderName ?? "unknown");
+      const icon = q.kind ? `${KIND_ICONS[q.kind]} ` : "";
       const body = q.text
-        ? whatsappToHtml(q.text)
+        ? icon + whatsappToHtml(q.text)
         : q.kind
           ? `${KIND_ICONS[q.kind]} ${escapeHtml(mediaKindLabel(q.kind))}`
           : `<i>No text</i>`;
@@ -255,7 +256,7 @@ body {
 .msg.first::before { content: ""; position: absolute; top: 0; width: 8px; height: 13px; background: inherit; }
 .msg.in.first::before { left: -8px; clip-path: polygon(0 0, 100% 0, 100% 100%); }
 .msg.out.first::before { right: -8px; clip-path: polygon(0 0, 100% 0, 0 100%); }
-.msg.bare { background: transparent; box-shadow: none; padding: 0; }
+.msg.bare, .msg.bare:not(:has(.text)) { background: transparent; box-shadow: none; padding: 0; }
 .msg.bare::before { display: none; }
 .name { font-size: 12.8px; line-height: 22px; font-weight: 500; }
 .forwarded { color: var(--muted); font-size: 13px; font-style: italic; margin-bottom: 2px; }
@@ -269,11 +270,11 @@ body {
 .meta { position: absolute; right: 7px; bottom: 3px; font-size: 11px; line-height: 15px; color: var(--muted); white-space: nowrap; }
 .meta.overlay {
   bottom: 8px; right: 10px; color: #fff; padding: 0 4px; border-radius: 4px;
-  background: rgba(11, 20, 26, .35); text-shadow: 0 1px 1px rgba(0, 0, 0, .3);
+  background: rgba(11, 20, 26, .35);
 }
 .msg:not(:has(.text)) { padding-bottom: 22px; }
 .msg:has(.meta.overlay) { padding: 3px 3px 3px 3px; }
-.msg.bare .meta { background: var(--chip); padding: 0 6px; border-radius: 8px; bottom: 4px; }
+.msg.bare .meta { background: var(--chip); padding: 0 6px; border-radius: 8px; bottom: 4px; right: 4px; }
 .quote {
   border-left: 4px solid var(--bar); border-radius: 7.5px; background: var(--quote-in);
   padding: 5px 10px 6px 8px; margin: 0 0 4px; font-size: 13.2px; line-height: 19px;
@@ -311,7 +312,7 @@ body {
   * { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
   .top { position: static; }
   #print, #lightbox { display: none !important; }
-  .chat { max-width: none; padding: 0 4px; }
+  .chat { max-width: none; padding: 0 12px; }
   .row, .day, .system { break-inside: avoid; }
 }
 `;

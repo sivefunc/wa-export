@@ -117,6 +117,13 @@ describe("renderChatHtml", () => {
     expect(doc.querySelector(".quote-text")!.textContent).toBe("🎥 Video");
   });
 
+  it("a reply to captioned media shows the media icon before the caption", () => {
+    const { doc } = render(
+      bundle([record({ timestamp: T, quoted: { id: "Q", fromMe: false, senderName: "Ana", timestamp: null, text: "the plan", kind: "image" } })]),
+    );
+    expect(doc.querySelector(".quote-text")!.textContent).toBe("📷 the plan");
+  });
+
   it("a reply to an unavailable message says so", () => {
     const { doc } = render(bundle([record({ timestamp: T, quotedUnavailable: true })]));
     expect(doc.querySelector(".quote-text")!.textContent).toBe("Message not available");
