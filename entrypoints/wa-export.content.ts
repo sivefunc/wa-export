@@ -1,27 +1,39 @@
 import { createRpcClient, windowTransport } from "../src/bridge/rpc";
-import { SelectionTracker, type SelectionSnapshot } from "../src/dom/selection-tracker";
+import { SelectionTracker } from "../src/dom/selection-tracker";
+import { collect } from "../src/export/collect";
+import { getWriter } from "../src/export/writers";
+import { loadSettings } from "../src/settings";
+import { createExportController } from "../src/ui/controller";
+import { mountExportUi } from "../src/ui/export-ui";
+import { saveBlob } from "../src/ui/save";
 
 export default defineContentScript({
   matches: ["https://web.whatsapp.com/*"],
   runAt: "document_idle",
-  main() {
+  main(ctx) {
     const rpc = createRpcClient(windowTransport("content"));
+    const ui = mountExportUi(document);
+    const controller = createExportController({
+      setState: ui.setState,
+      loadSettings,
+      collect: (o) => collect({ ...o, rpc }),
+      getWriter,
+      save: saveBlob,
+    });
+    ui.onExport(() => void controller.exportNow());
+    ui.onConfirm(controller.confirm);
+    ui.onDismiss(controller.dismiss);
 
-    // Dev-only: expose what the page bridge returns for the current selection, for live probing.
-    const probe = async (s: SelectionSnapshot) => {
-      if (!import.meta.env.DEV) return;
-      const result: Record<string, unknown> = { at: new Date().toISOString(), selection: s };
-      try {
-        result.health = await rpc.call("HEALTH", {}, 5_000);
-        if (s.ids.length) result.messages = await rpc.call("GET_MESSAGES", { ids: s.ids }, 30_000);
-      } catch (err) {
-        result.error = String(err);
-      }
-      document.documentElement.dataset.waExportProbe = JSON.stringify(result);
-    };
-
-    const tracker = new SelectionTracker(document, (s) => void probe(s));
+    const tracker = new SelectionTracker(document, (s) => {
+      controller.selectionChanged(s);
+      ui.place();
+    });
     tracker.start();
-    void probe(tracker.snapshot());
+    ui.setState({ kind: "hidden" });
+
+    ctx.onInvalidated(() => {
+      tracker.stop();
+      ui.destroy();
+    });
   },
 });

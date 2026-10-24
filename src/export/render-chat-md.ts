@@ -68,20 +68,24 @@ function renderMessage(r: ExportRecord): string {
   return parts.join("\n\n");
 }
 
-export function renderChatMd(b: ExportBundle): string {
+/** One plain-language line per problem, shared by chat.md and the summary in WhatsApp. */
+export function problemLines(b: ExportBundle): string[] {
   const byId = new Map(b.records.map((r) => [r.id, r]));
+  return b.problems.map((p) => {
+    const r = p.messageId ? byId.get(p.messageId) : undefined;
+    if (!r) return `Message ${p.messageId ?? "unknown"}: ${problemText(p)}`;
+    return `${senderOf(r)} at ${formatLocal(r.timestamp)}: ${mediaKindLabel(r.media?.kind)} ${problemText(p)}`;
+  });
+}
+
+export function renderChatMd(b: ExportBundle): string {
   const exported = formatLocal(Math.floor(b.exportedAt.getTime() / 1000));
   const header = [
     `# WhatsApp export: ${b.chat.name || "Unknown chat"}`,
     `Exported: ${exported} · ${plural(b.records.length, "message")}`,
   ];
   if (b.problems.length) {
-    const lines = b.problems.map((p) => {
-      const r = p.messageId ? byId.get(p.messageId) : undefined;
-      if (!r) return `- Message ${p.messageId ?? "unknown"}: ${problemText(p)}`;
-      return `- ${senderOf(r)} at ${formatLocal(r.timestamp)}: ${mediaKindLabel(r.media?.kind)} ${problemText(p)}`;
-    });
-    header.push(`## Export problems\n\n${lines.join("\n")}`);
+    header.push(`## Export problems\n\n${problemLines(b).map((line) => `- ${line}`).join("\n")}`);
   }
   return `${header.join("\n\n")}\n\n---\n\n${b.records.map(renderMessage).join("\n\n")}\n`;
 }

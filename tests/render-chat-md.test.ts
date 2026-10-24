@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { problemText } from "../src/export/problems";
-import { formatLocal, renderChatMd } from "../src/export/render-chat-md";
+import { formatLocal, problemLines, renderChatMd } from "../src/export/render-chat-md";
 import type { ExportBundle, ExportProblem, ExportRecord } from "../src/types";
 import { media, record } from "./fixtures/messages";
 
@@ -59,6 +59,15 @@ describe("renderChatMd", () => {
     expect(renderChatMd(bundle([r]))).toContain(
       "## Export problems\n\n- Ana at 2026-10-24 06:34: Image could not be downloaded from WhatsApp\n",
     );
+  });
+
+  it("problemLines gives the same plain lines for the UI summary", () => {
+    const r = record({ timestamp: T, sender: { jid: "1", name: "Ana" }, media: media("voice") }, { problems: [problem(null, "media_expired")] });
+    r.problems[0].messageId = r.id;
+    expect(problemLines(bundle([r], [...r.problems, problem("GONE", "message_not_found")]))).toEqual([
+      "Ana at 2026-10-24 06:34: Voice note expired on WhatsApp, not re-requested",
+      "Message GONE: this message could not be read",
+    ]);
   });
 
   it("message_not_found for an id with no record appears in problems section", () => {
