@@ -4,7 +4,7 @@ export const CHANNEL = "wa-export:v1";
 
 export interface Ops {
   HEALTH: { req: {}; res: { ready: boolean; missing: string[]; waJsVersion: string | null } };
-  GET_CHAT: { req: { jid: string }; res: ChatInfo };
+  GET_CHAT: { req: {}; res: ChatInfo }; // the chat open in WhatsApp
   GET_MESSAGES: {
     req: { ids: string[] };
     res: { messages: WaMessage[]; failures: { id: string; code: "message_not_found"; detail: string }[] };

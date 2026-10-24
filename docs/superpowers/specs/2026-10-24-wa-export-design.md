@@ -169,6 +169,16 @@ A WXT options page using `storage`. v1 shows the current (only) format and order
 - **Third-party notices** for WA-JS (Apache-2.0) and JSZip in the package.
 - **Store risk:** Meta could ask a store to remove a WhatsApp-related extension. Many exist on both stores today, so it's acceptable, but it's outside our control.
 
+## Live findings (2026-10-24, WhatsApp Web 2.3000.1051605128)
+
+The live gate corrected four assumptions. The code follows these, not the original text above:
+
+- **Message ids:** `data-id` holds only the bare message id (e.g. `AC9FEA8F…`), with no `true_<jid>_` prefix. Full keys look like `true_<self>@lid_AC9F…_out`. The page side resolves bare ids through `WPP.whatsapp.MsgStore`, restricted to the open chat (`WPP.chat.getActiveChat()`). The chat name comes from the active chat, not from the DOM.
+- **Selection markup:** select mode adds a nested `<input type="checkbox" aria-checked>` to each message inside `#main`. A chat switch replaces `#main`, which clears the selection.
+- **Readiness:** `WPP.isReady` can stay false after a cached reload while every function works. Readiness means "the required functions answer".
+- **Re-upload requests:** WhatsApp's downloader calls `RequestMediaReuploadManager.requestMediaReupload` (a server-error receipt to the sender) when media has expired. The page side wraps that method so it is blocked for messages being exported, and reports them as expired. Expired stages seen: `NEED_POKE`, `REMOTE_NEED_UPLOAD`. If the guard can't be installed, only media already downloaded (`RESOLVED`) is fetched.
+- Forwarded messages are flagged (`isForwarded`) and labeled in the export.
+
 ## Extension points
 
 - `writers`: id → `(records, media) => Promise<{blob, filename}>`. Future: TAR, PDF.

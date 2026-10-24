@@ -26,6 +26,7 @@ export interface WaMessage {
   quotedUnavailable: boolean; // reply to a message whose content couldn't be loaded
   media: WaMediaInfo | null;
   isViewOnce: boolean;
+  isForwarded: boolean;
 }
 
 export type ProblemCode =

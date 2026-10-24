@@ -33,9 +33,9 @@ afterEach(() => vi.useRealTimers());
 describe("rpc", () => {
   it("call resolves with the handler result", async () => {
     const { page, content } = makePair();
-    createRpcServer(page, handlers({ GET_CHAT: async ({ jid }) => ({ jid, name: "Team" }) }));
+    createRpcServer(page, handlers({ GET_CHAT: async () => ({ jid: "1@g.us", name: "Team" }) }));
     const rpc = createRpcClient(content);
-    await expect(rpc.call("GET_CHAT", { jid: "1@g.us" }, 1000)).resolves.toEqual({ jid: "1@g.us", name: "Team" });
+    await expect(rpc.call("GET_CHAT", {}, 1000)).resolves.toEqual({ jid: "1@g.us", name: "Team" });
   });
 
   it("handler throwing RpcError keeps its code on the client", async () => {
@@ -93,18 +93,18 @@ describe("rpc", () => {
     createRpcServer(
       page,
       handlers({
-        GET_CHAT: async ({ jid }) => {
-          if (jid === "first") await firstGate;
-          return { jid, name: jid.toUpperCase() };
+        GET_MESSAGES: async ({ ids }) => {
+          if (ids[0] === "first") await firstGate;
+          return { messages: [], failures: [{ id: ids[0], code: "message_not_found" as const, detail: ids[0].toUpperCase() }] };
         },
       }),
     );
     const rpc = createRpcClient(content);
-    const first = rpc.call("GET_CHAT", { jid: "first" }, 1000);
-    const second = await rpc.call("GET_CHAT", { jid: "second" }, 1000);
+    const first = rpc.call("GET_MESSAGES", { ids: ["first"] }, 1000);
+    const second = await rpc.call("GET_MESSAGES", { ids: ["second"] }, 1000);
     releaseFirst();
-    expect(second.name).toBe("SECOND");
-    expect((await first).name).toBe("FIRST");
+    expect(second.failures[0].detail).toBe("SECOND");
+    expect((await first).failures[0].detail).toBe("FIRST");
   });
 
   it("responses from another channel are ignored", async () => {

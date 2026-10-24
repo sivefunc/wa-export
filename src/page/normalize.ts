@@ -89,5 +89,6 @@ export function normalizeMessage(raw: any, resolveName: (jid: string) => string 
     quotedUnavailable: !quoted && typeof raw?.quotedStanzaID === "string",
     media: mediaOf(raw),
     isViewOnce: Boolean(raw?.isViewOnce),
+    isForwarded: Boolean(raw?.isForwarded),
   };
 }

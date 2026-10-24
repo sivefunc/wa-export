@@ -76,6 +76,11 @@ describe("normalizeMessage", () => {
     expect(m.quotedUnavailable).toBe(false);
   });
 
+  it("marks forwarded messages", () => {
+    expect(normalizeMessage({ ...raw.chatText, isForwarded: true }, resolveName).isForwarded).toBe(true);
+    expect(normalizeMessage(raw.chatText, resolveName).isForwarded).toBe(false);
+  });
+
   it("revoked message normalizes with empty text and media null", () => {
     const m = normalizeMessage(raw.revoked, resolveName);
     expect(m.type).toBe("revoked");

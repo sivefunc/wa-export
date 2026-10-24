@@ -28,8 +28,10 @@ const main = () => document.getElementById("main")!;
 function nestedRow(id: string, checked: boolean, top: number) {
   const row = document.createElement("div");
   row.dataset.id = id;
-  const box = document.createElement("span");
-  box.setAttribute("role", "checkbox");
+  row.dataset.testid = `conv-msg-${id}`;
+  // Live markup (2026-10-24): <input type="checkbox" aria-checked> nested in the message element.
+  const box = document.createElement("input");
+  box.type = "checkbox";
   box.setAttribute("aria-checked", String(checked));
   row.append("hello", box);
   main().append(row);
@@ -46,6 +48,7 @@ function siblingRow(id: string, checked: boolean, top: number) {
   box.setAttribute("aria-checked", String(checked));
   const row = document.createElement("div");
   row.dataset.id = id;
+  row.dataset.testid = `conv-msg-${id}`;
   wrap.append(box, row);
   main().append(wrap);
   setBox(row, { top, height: 50 });
@@ -77,30 +80,36 @@ describe("checkedState", () => {
 describe("isSelectionModeActive", () => {
   it("is false without visible checkboxes and true with one", () => {
     expect(isSelectionModeActive(document)).toBe(false);
-    nestedRow("false_1@c.us_A", false, 100);
+    nestedRow("A", false, 100);
     expect(isSelectionModeActive(document)).toBe(true);
+  });
+
+  it("ignores checkboxes outside #main, like the login page's", () => {
+    document.body.innerHTML = '<label><input type="checkbox" aria-checked="true"></label>';
+    setBox(document.querySelector("input")!, { top: 10, height: 20 });
+    expect(isSelectionModeActive(document)).toBe(false);
   });
 });
 
 describe("SelectionTracker", () => {
   it("nested aria-checked=true row is selected", () => {
-    nestedRow("false_1@c.us_A", true, 100);
-    nestedRow("false_1@c.us_B", false, 200);
+    nestedRow("A", true, 100);
+    nestedRow("B", false, 200);
     const { t } = tracker();
     t.reconcile();
-    expect(t.snapshot()).toEqual({ active: true, chatJid: "1@c.us", ids: ["false_1@c.us_A"] });
+    expect(t.snapshot()).toEqual({ active: true, ids: ["A"] });
   });
 
   it("sibling checkbox matched by geometry", () => {
-    siblingRow("false_1@c.us_A", false, 100);
-    siblingRow("false_1@c.us_B", true, 200);
+    siblingRow("A", false, 100);
+    siblingRow("B", true, 200);
     const { t } = tracker();
     t.reconcile();
-    expect(t.snapshot().ids).toEqual(["false_1@c.us_B"]);
+    expect(t.snapshot().ids).toEqual(["B"]);
   });
 
   it("unchecking removes the id", () => {
-    const { box } = nestedRow("false_1@c.us_A", true, 100);
+    const { box } = nestedRow("A", true, 100);
     const { t } = tracker();
     t.reconcile();
     box.setAttribute("aria-checked", "false");
@@ -109,51 +118,51 @@ describe("SelectionTracker", () => {
   });
 
   it("row removed from DOM stays selected", () => {
-    const { row } = nestedRow("false_1@c.us_A", true, 100);
-    nestedRow("false_1@c.us_B", false, 200);
+    const { row } = nestedRow("A", true, 100);
+    nestedRow("B", false, 200);
     const { t } = tracker();
     t.reconcile();
     row.remove();
     t.reconcile();
-    expect(t.snapshot().ids).toEqual(["false_1@c.us_A"]);
+    expect(t.snapshot().ids).toEqual(["A"]);
   });
 
   it("leaving selection mode clears", () => {
-    nestedRow("false_1@c.us_A", true, 100);
+    nestedRow("A", true, 100);
     const { t } = tracker();
     t.reconcile();
-    main().querySelectorAll('[role="checkbox"]').forEach((b) => b.remove());
+    main().querySelectorAll("input[type=checkbox], [role=checkbox]").forEach((b) => b.remove());
     t.reconcile();
-    expect(t.snapshot()).toEqual({ active: false, chatJid: null, ids: [] });
+    expect(t.snapshot()).toEqual({ active: false, ids: [] });
   });
 
-  it("rows from a different chat jid clear the set", () => {
-    nestedRow("false_1@c.us_A", true, 100);
+  it("a new #main element (chat switch) clears the set", () => {
+    nestedRow("A", true, 100);
     const { t } = tracker();
     t.reconcile();
-    main().innerHTML = "";
-    nestedRow("false_2@g.us_X_9@c.us", false, 100);
+    document.body.innerHTML = '<div id="main"></div>';
+    nestedRow("X", false, 100);
     t.reconcile();
-    expect(t.snapshot()).toEqual({ active: true, chatJid: "2@g.us", ids: [] });
+    expect(t.snapshot()).toEqual({ active: true, ids: [] });
   });
 
   it("ids keep first-checked order", () => {
-    const a = nestedRow("false_1@c.us_A", false, 100);
-    nestedRow("false_1@c.us_B", true, 200);
+    const a = nestedRow("A", false, 100);
+    nestedRow("B", true, 200);
     const { t } = tracker();
     t.reconcile();
     a.box.setAttribute("aria-checked", "true");
     t.reconcile();
-    expect(t.snapshot().ids).toEqual(["false_1@c.us_B", "false_1@c.us_A"]);
+    expect(t.snapshot().ids).toEqual(["B", "A"]);
   });
 
   it("reports changes through onChange only when the snapshot changes", () => {
-    const { box } = nestedRow("false_1@c.us_A", false, 100);
+    const { box } = nestedRow("A", false, 100);
     const { t, changes } = tracker();
     t.reconcile();
     t.reconcile();
     box.setAttribute("aria-checked", "true");
     t.reconcile();
-    expect(changes.map((c) => c.ids)).toEqual([[], ["false_1@c.us_A"]]);
+    expect(changes.map((c) => c.ids)).toEqual([[], ["A"]]);
   });
 });

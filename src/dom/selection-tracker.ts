@@ -1,9 +1,7 @@
-import { parseChatJid } from "./chat-id";
 import { SEL } from "./selectors";
 
 export interface SelectionSnapshot {
   active: boolean;
-  chatJid: string | null;
   ids: string[]; // in first-checked order
 }
 
@@ -25,13 +23,10 @@ function isVisible(el: Element): boolean {
   return style?.display !== "none" && style?.visibility !== "hidden";
 }
 
-function chatRoot(doc: Document): Element {
-  return doc.querySelector(SEL.chatRoot) ?? doc.body;
-}
-
+/** Select mode exists only inside an open chat; checkboxes elsewhere (e.g. the login page) don't count. */
 export function isSelectionModeActive(doc: Document): boolean {
-  const hasCheckbox = [...chatRoot(doc).querySelectorAll(SEL.checkbox)].some(isVisible);
-  return hasCheckbox || doc.querySelector(SEL.selectionCounter) !== null;
+  const root = doc.querySelector(SEL.chatRoot);
+  return !!root && [...root.querySelectorAll(SEL.checkbox)].some(isVisible);
 }
 
 /** The row's checkbox: nested inside it, else the nearest visible one beside it on screen. */
@@ -56,7 +51,7 @@ function findControlForRow(row: Element, root: Element): Element | null {
 export class SelectionTracker {
   private ids = new Set<string>();
   private active = false;
-  private chatJid: string | null = null;
+  private root: Element | null = null;
   private last = "";
   private frame = 0;
   private observer: MutationObserver | null = null;
@@ -90,23 +85,18 @@ export class SelectionTracker {
   }
 
   snapshot(): SelectionSnapshot {
-    return { active: this.active, chatJid: this.chatJid, ids: [...this.ids] };
+    return { active: this.active, ids: [...this.ids] };
   }
 
   /** Read the visible rows' checkbox state into the persistent selection. */
   reconcile(): void {
     this.active = isSelectionModeActive(this.doc);
-    if (!this.active) {
-      this.ids.clear();
-      this.chatJid = null;
-    } else {
-      const root = chatRoot(this.doc);
+    const root = this.doc.querySelector(SEL.chatRoot);
+    // WhatsApp replaces #main on chat switch, so a new element means a new chat.
+    if (!this.active || root !== this.root) this.ids.clear();
+    this.root = root;
+    if (this.active && root) {
       const rows = [...root.querySelectorAll<HTMLElement>(SEL.messageRow)];
-      const visibleChat = rows.map((r) => parseChatJid(r.dataset.id ?? "")).find((j) => j) ?? null;
-      if (visibleChat && visibleChat !== this.chatJid) {
-        this.ids.clear();
-        this.chatJid = visibleChat;
-      }
       for (const row of rows) {
         const id = row.dataset.id;
         const control = id ? findControlForRow(row, root) : null;

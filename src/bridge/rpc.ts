@@ -19,9 +19,8 @@ interface Request {
   req: unknown;
 }
 
-type Response =
-  | { channel: typeof CHANNEL; dir: "response"; requestId: string; ok: true; value: unknown }
-  | { channel: typeof CHANNEL; dir: "response"; requestId: string; ok: false; code: string; message: string };
+type ResponseBody = { ok: true; value: unknown } | { ok: false; code: string; message: string };
+type Response = { channel: typeof CHANNEL; dir: "response"; requestId: string } & ResponseBody;
 
 function isOurs(msg: any, dir: "request" | "response"): boolean {
   return msg?.channel === CHANNEL && msg.dir === dir && typeof msg.requestId === "string";
@@ -31,7 +30,7 @@ export function createRpcServer(t: Transport, handlers: Handlers): () => void {
   return t.listen(async (raw) => {
     if (!isOurs(raw, "request")) return;
     const msg = raw as Request;
-    const reply = (body: Omit<Response, "channel" | "dir" | "requestId">, transfer?: Transferable[]) =>
+    const reply = (body: ResponseBody, transfer?: Transferable[]) =>
       t.post({ channel: CHANNEL, dir: "response", requestId: msg.requestId, ...body }, transfer);
 
     const handler = (handlers as Record<string, ((req: unknown) => Promise<unknown>) | undefined>)[msg.op];
