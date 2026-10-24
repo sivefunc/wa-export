@@ -74,6 +74,18 @@ svg { display: block; width: 24px; height: 24px; fill: currentColor; }
 .item .value { margin-inline-start: 16px; color: var(--muted); white-space: nowrap; }
 .item .caret { margin-inline-start: 4px; color: var(--muted); }
 .item .caret svg { width: 18px; height: 18px; }
+/* Motion: added only on the render where something appears or goes, so redraws don't replay it. */
+.settings[aria-expanded="true"] svg { transform: rotate(180deg); }
+.settings.turn-open svg { animation: turn-open 420ms cubic-bezier(.2, .8, .2, 1); }
+.settings.turn-close svg { animation: turn-close 420ms cubic-bezier(.2, .8, .2, 1); }
+.menu, .submenu, .panel { transform-origin: bottom right; }
+.enter { animation: pop-in 180ms cubic-bezier(.1, .82, .25, 1); }
+.leave { animation: pop-out 140ms ease-in forwards; pointer-events: none; }
+@keyframes turn-open { from { transform: rotate(0); } to { transform: rotate(180deg); } }
+@keyframes turn-close { from { transform: rotate(180deg); } to { transform: rotate(0); } }
+@keyframes pop-in { from { opacity: 0; transform: scale(.85); } to { opacity: 1; transform: scale(1); } }
+@keyframes pop-out { from { opacity: 1; transform: scale(1); } to { opacity: 0; transform: scale(.92); } }
+@media (prefers-reduced-motion: reduce) { .enter, .leave, .settings svg { animation: none !important; } }
 .option { min-height: 48px; padding-block: 6px; }
 .option .label { display: flex; flex-direction: column; flex: 1; }
 .option .hint { color: var(--muted); font-size: 12.5px; line-height: 17px; white-space: normal; }
@@ -108,15 +120,26 @@ const MENU: { name: SettingName; text: string; icon: keyof typeof ICONS; choices
 interface MenuState {
   settings: Settings;
   sub: SettingName | null; // the open submenu
+  leaving: boolean; // fading out; removed when the animation ends
 }
 
-function menuHtml(m: MenuState): string {
+/** One-shot animation classes for a single render. */
+interface Fx {
+  gear?: "turn-open" | "turn-close";
+  menu?: "enter" | "leave";
+  sub?: "enter";
+  panel?: "enter";
+}
+
+const LEAVE_MS = 150;
+
+function menuHtml(m: MenuState, fx: Fx): string {
   const entries = MENU.map((entry) => {
     const choices = entry.choices();
     const current = choices.find((c) => c.id === m.settings[entry.name]) ?? choices[0];
     const open = m.sub === entry.name;
     const sub = open
-      ? `<div class="submenu" role="menu" aria-label="${esc(entry.text)}">${choices
+      ? `<div class="submenu${fx.sub ? ` ${fx.sub}` : ""}" role="menu" aria-label="${esc(entry.text)}">${choices
           .map((c) => {
             const checked = c.id === current?.id;
             return `<button class="item option" role="menuitemradio" aria-checked="${checked}" data-setting="${entry.name}" data-value="${esc(c.id)}">
@@ -129,19 +152,21 @@ function menuHtml(m: MenuState): string {
       <span class="icon">${icon(entry.icon)}</span><span class="text">${esc(entry.text)}</span>
       <span class="value">${esc(current?.text ?? "")}</span><span class="caret">${icon("caret")}</span></button>${sub}</div>`;
   }).join("");
-  return `<div class="menu" role="menu" aria-label="Export settings">${entries}</div>`;
+  return `<div class="menu${fx.menu ? ` ${fx.menu}` : ""}" role="menu" aria-label="Export settings">${entries}</div>`;
 }
 
-function render(s: UiState, gear: boolean, menu: MenuState | null): string {
+function render(s: UiState, gear: boolean, menu: MenuState | null, fx: Fx): string {
   const label = esc(buttonLabel(s));
+  const panel = `panel${fx.panel ? ` ${fx.panel}` : ""}`;
   switch (s.kind) {
     case "hidden":
       return "";
     case "idle": {
+      const expanded = !!menu && !menu.leaving;
       const settings = gear
-        ? `<button class="settings" aria-label="Export settings" title="Export settings" aria-haspopup="menu" aria-expanded="${!!menu}">${icon("settings")}</button>`
+        ? `<button class="settings${fx.gear ? ` ${fx.gear}` : ""}" aria-label="Export settings" title="Export settings" aria-haspopup="menu" aria-expanded="${expanded}">${icon("settings")}</button>`
         : "";
-      return `${menu ? menuHtml(menu) : ""}<div class="buttons"><button class="export">${label}</button>${settings}</div>`;
+      return `${menu ? menuHtml(menu, fx) : ""}<div class="buttons"><button class="export">${label}</button>${settings}</div>`;
     }
     case "working": {
       const pct = Math.round((progressFraction(s) ?? 0) * 100);
@@ -149,18 +174,25 @@ function render(s: UiState, gear: boolean, menu: MenuState | null): string {
         aria-valuenow="${pct}" style="width: ${pct}%"></span><span class="label">${label}</span></button>`;
     }
     case "confirm":
-      return `<div class="panel"><p>${label}</p><div class="row">
+      return `<div class="${panel}"><p>${label}</p><div class="row">
         <button class="secondary cancel">Cancel</button><button class="export continue">Continue</button></div></div>`;
     case "done": {
       const list = s.problems.length ? `<ul>${s.problems.map((p) => `<li>${esc(p)}</li>`).join("")}</ul>` : "";
-      return `<div class="panel"><p>${label}</p>${list}<div class="row"><button class="secondary dismiss">OK</button></div></div>`;
+      return `<div class="${panel}"><p>${label}</p>${list}<div class="row"><button class="secondary dismiss">OK</button></div></div>`;
     }
     case "error":
-      return `<div class="panel error"><p>${label}</p><div class="row"><button class="secondary dismiss">OK</button></div></div>`;
+      return `<div class="${panel} error"><p>${label}</p><div class="row"><button class="secondary dismiss">OK</button></div></div>`;
   }
 }
 
-export function mountExportUi(doc: Document, settingsAccess?: SettingsAccess): ExportUi {
+/** Animations run unless the user asked the system for reduced motion (or there is no matchMedia, as in tests). */
+function motionAllowed(doc: Document): boolean {
+  const mq = doc.defaultView?.matchMedia;
+  return typeof mq === "function" && !mq.call(doc.defaultView, "(prefers-reduced-motion: reduce)").matches;
+}
+
+export function mountExportUi(doc: Document, settingsAccess?: SettingsAccess, opts: { motion?: boolean } = {}): ExportUi {
+  const motion = opts.motion ?? motionAllowed(doc);
   const host = doc.createElement("wa-export-ui");
   const shadow = host.attachShadow({ mode: "open" });
   const handlers = { export: () => {}, confirm: (_ok: boolean) => {}, dismiss: () => {} };
@@ -168,11 +200,13 @@ export function mountExportUi(doc: Document, settingsAccess?: SettingsAccess): E
   let drawn = "";
   let menu: MenuState | null = null;
   let opening = 0; // ignores a settings load that finishes after the menu was closed again
+  let leaveTimer: ReturnType<typeof setTimeout> | undefined;
+  let hoverTimer: ReturnType<typeof setTimeout> | undefined;
 
   const focus = (selector: string) => shadow.querySelector<HTMLElement>(selector)?.focus();
 
-  const draw = () => {
-    const html = `<style>${STYLE}</style><div class="wrap">${render(state, !!settingsAccess, menu)}</div>`;
+  const draw = (fx: Fx = {}) => {
+    const html = `<style>${STYLE}</style><div class="wrap">${render(state, !!settingsAccess, menu, motion ? fx : {})}</div>`;
     if (html !== drawn) shadow.innerHTML = drawn = html;
     host.hidden = state.kind === "hidden";
     place();
@@ -181,13 +215,24 @@ export function mountExportUi(doc: Document, settingsAccess?: SettingsAccess): E
   const onPointer = (e: Event) => {
     if (!e.composedPath().includes(host)) closeMenu(false);
   };
+  const isOpen = () => !!menu && !menu.leaving;
   function closeMenu(returnFocus = true) {
     opening++;
     clearTimeout(hoverTimer);
     doc.removeEventListener("pointerdown", onPointer, true);
-    if (!menu) return;
-    menu = null;
-    draw();
+    if (!isOpen()) return;
+    if (motion && state.kind === "idle") {
+      menu = { ...menu!, sub: null, leaving: true };
+      draw({ gear: "turn-close", menu: "leave" });
+      clearTimeout(leaveTimer);
+      leaveTimer = setTimeout(() => {
+        menu = null;
+        draw();
+      }, LEAVE_MS);
+    } else {
+      menu = null;
+      draw();
+    }
     if (returnFocus) focus("button.settings");
   }
   async function openMenu() {
@@ -195,28 +240,31 @@ export function mountExportUi(doc: Document, settingsAccess?: SettingsAccess): E
     const ticket = ++opening;
     const settings = await settingsAccess.load();
     if (ticket !== opening || state.kind !== "idle") return;
-    menu = { settings, sub: null };
+    clearTimeout(leaveTimer);
+    menu = { settings, sub: null, leaving: false };
     doc.addEventListener("pointerdown", onPointer, true);
-    draw();
+    draw({ gear: "turn-open", menu: "enter" });
     focus(".menu [role=menuitem]");
   }
   /** From the keyboard or a click, focus moves into the submenu; on hover it stays on the item. */
   function openSub(name: SettingName, focusInside = true) {
-    if (!menu) return;
-    menu = { ...menu, sub: name };
-    draw();
+    clearTimeout(hoverTimer);
+    if (!isOpen()) return;
+    if (menu!.sub === name) return void (focusInside && focus(`.submenu [aria-checked="true"]`));
+    menu = { ...menu!, sub: name };
+    draw({ sub: "enter" });
     focus(focusInside ? `.submenu [aria-checked="true"]` : `[data-sub="${name}"]`);
   }
   function closeSub() {
-    if (!menu?.sub) return;
+    if (!isOpen() || !menu?.sub) return;
     const name = menu.sub;
     menu = { ...menu, sub: null };
     draw();
     focus(`[data-sub="${name}"]`);
   }
   async function choose(name: SettingName, value: string) {
-    if (!menu || !settingsAccess) return;
-    const next = { ...menu.settings, [name]: value };
+    if (!isOpen() || !settingsAccess) return;
+    const next = { ...menu!.settings, [name]: value };
     closeMenu();
     await settingsAccess.save(next);
   }
@@ -224,8 +272,9 @@ export function mountExportUi(doc: Document, settingsAccess?: SettingsAccess): E
   shadow.addEventListener("click", (event) => {
     const btn = (event.target as Element).closest("button");
     if (!btn || btn.disabled) return;
-    if (btn.classList.contains("settings")) return void (menu ? closeMenu() : openMenu());
-    if (btn.dataset.sub) return menu?.sub === btn.dataset.sub ? closeSub() : openSub(btn.dataset.sub as SettingName);
+    if (btn.classList.contains("settings")) return void (isOpen() ? closeMenu() : openMenu());
+    // Like WhatsApp: a click opens the submenu (or moves into it); it never toggles one the pointer just opened.
+    if (btn.dataset.sub) return openSub(btn.dataset.sub as SettingName);
     if (btn.dataset.setting) return void choose(btn.dataset.setting as SettingName, btn.dataset.value!);
     if (btn.classList.contains("continue")) handlers.confirm(true);
     else if (btn.classList.contains("cancel")) handlers.confirm(false);
@@ -236,17 +285,16 @@ export function mountExportUi(doc: Document, settingsAccess?: SettingsAccess): E
     }
   });
 
-  let hoverTimer: ReturnType<typeof setTimeout> | undefined;
   shadow.addEventListener("mouseover", (event) => {
     const item = (event.target as Element).closest<HTMLElement>("[data-sub]");
     clearTimeout(hoverTimer);
-    if (!item || !menu || menu.sub === item.dataset.sub) return;
+    if (!item || !isOpen() || menu!.sub === item.dataset.sub) return;
     hoverTimer = setTimeout(() => openSub(item.dataset.sub as SettingName, false), 150);
   });
 
   // Keyboard like WhatsApp's menus: arrows move, Right/Enter open a submenu, Left/Escape go back.
   shadow.addEventListener("keydown", (event) => {
-    if (!menu) return;
+    if (!isOpen()) return;
     const e = event as KeyboardEvent;
     const current = shadow.activeElement as HTMLElement | null;
     const list = current?.closest(".submenu, .menu");
@@ -278,9 +326,14 @@ export function mountExportUi(doc: Document, settingsAccess?: SettingsAccess): E
 
   return {
     setState(s) {
+      const appeared = s.kind !== state.kind && (s.kind === "confirm" || s.kind === "done" || s.kind === "error");
       state = s;
-      if (s.kind !== "idle" && menu) closeMenu(false);
-      draw();
+      if (s.kind !== "idle" && menu) {
+        clearTimeout(leaveTimer);
+        closeMenu(false);
+        menu = null;
+      }
+      draw(appeared ? { panel: "enter" } : {});
     },
     place,
     onExport: (fn) => void (handlers.export = fn),
@@ -288,6 +341,7 @@ export function mountExportUi(doc: Document, settingsAccess?: SettingsAccess): E
     onDismiss: (fn) => void (handlers.dismiss = fn),
     destroy: () => {
       closeMenu(false);
+      clearTimeout(leaveTimer);
       host.remove();
     },
   };
