@@ -1,11 +1,12 @@
 // Headless Firefox check of the content-script paths unit tests can't cover:
 // the real ZIP writer fed page-world bytes (once hung at 33%), and <a download> saving.
 // Usage: pnpm test:firefox   Env: FIREFOX_BINARY (optional; Selenium Manager finds Firefox and geckodriver).
-import { execFileSync } from "node:child_process";
-import { cpSync, existsSync, mkdtempSync, readdirSync } from "node:fs";
+import { cpSync, existsSync, mkdtempSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
-import { dirname, join, resolve } from "node:path";
+import { dirname, join, relative } from "node:path";
 import { fileURLToPath } from "node:url";
+import JSZip from "jszip";
+import { rolldown } from "rolldown";
 import { Builder } from "selenium-webdriver";
 import firefox from "selenium-webdriver/firefox.js";
 
@@ -14,9 +15,21 @@ const work = mkdtempSync(join(tmpdir(), "wa-export-smoke-"));
 const ext = join(work, "ext");
 const downloads = join(work, "downloads");
 cpSync(join(here, "fixture"), ext, { recursive: true });
-execFileSync(resolve(here, "../../node_modules/.bin/rolldown"), [join(here, "entry.ts"), "--format", "iife", "--file", join(ext, "writer.js")], { stdio: "ignore" });
+const bundle = await rolldown({ input: join(here, "entry.ts") });
+await bundle.write({ format: "iife", file: join(ext, "writer.js") });
+
+// An .xpi is a zip of the add-on folder (built with JSZip so it works on any OS).
+const xpiZip = new JSZip();
+const addDir = (dir) => {
+  for (const entry of readdirSync(dir, { withFileTypes: true })) {
+    const full = join(dir, entry.name);
+    if (entry.isDirectory()) addDir(full);
+    else xpiZip.file(relative(ext, full).split("\\").join("/"), readFileSync(full));
+  }
+};
+addDir(ext);
 const xpi = join(work, "smoke.xpi");
-execFileSync("zip", ["-qr", xpi, "."], { cwd: ext });
+writeFileSync(xpi, await xpiZip.generateAsync({ type: "nodebuffer" }));
 
 const options = new firefox.Options()
   .addArguments("-headless")
