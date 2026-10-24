@@ -37,7 +37,8 @@ export type ProblemCode =
   | "media_expired"
   | "media_timeout"
   | "view_once_skipped"
-  | "media_error";
+  | "media_error"
+  | "unsupported_type";
 
 export interface ExportProblem {
   messageId: string | null;

@@ -9,6 +9,12 @@ export const MAX_BYTES = 1.5 * 1024 ** 3;
 
 const MESSAGE_TIMEOUT_MS = 30_000;
 const MEDIA_TIMEOUT_MS = 60_000;
+const SLOWEST_EXPECTED_BYTES_PER_MS = 512; // ~512 KB/s
+
+/** 60 s plus time for the file at a slow connection, so big videos can finish. */
+function mediaTimeoutMs(size: number | null): number {
+  return MEDIA_TIMEOUT_MS + Math.ceil((size ?? 0) / SLOWEST_EXPECTED_BYTES_PER_MS);
+}
 const BATCH_SIZE = 50;
 
 export type FatalCode = "nothing_selected" | "not_ready" | "nothing_readable" | "too_large" | "cancelled";
@@ -86,6 +92,12 @@ export async function collect(o: CollectOptions): Promise<CollectResult> {
   }
 
   const records: ExportRecord[] = applyOrdering(found, o.orderingId).map((m) => ({ ...m, exportedMedia: null, problems: [] }));
+  for (const r of records) {
+    // Polls, locations, contact cards… have no text or file we can export; say so.
+    if (!r.text && !r.media && r.type !== "revoked") {
+      r.problems.push({ messageId: r.id, code: "unsupported_type", detail: r.type });
+    }
+  }
 
   const totalBytes = records.reduce((sum, r) => sum + (r.media?.size ?? 0), 0);
   if (totalBytes > MAX_BYTES) {
@@ -104,7 +116,7 @@ export async function collect(o: CollectOptions): Promise<CollectResult> {
   const media = new Map<string, Blob>();
   await eachLimited(withMedia, o.concurrency ?? 3, async (r) => {
     try {
-      const res = await o.rpc.call("GET_MEDIA", { id: r.id }, MEDIA_TIMEOUT_MS);
+      const res = await o.rpc.call("GET_MEDIA", { id: r.id }, mediaTimeoutMs(r.media?.size ?? null));
       const blob = new Blob([res.buffer], { type: res.mime });
       const path = paths.get(r.id)!;
       media.set(path, blob);

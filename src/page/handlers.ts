@@ -57,8 +57,9 @@ function guardFor(mgr: ReuploadManagerLike | null | undefined): ReuploadGuard | 
   const original = mgr.requestMediaReupload.bind(mgr);
   mgr.requestMediaReupload = async (msg: any) => {
     const id = msg?.id?.id;
-    if (typeof id === "string" && guard.blocked.has(id)) {
-      guard.hit.add(id);
+    // Fail closed: during an export download, an id we can't read is treated as ours.
+    if (guard.blocked.size && (typeof id !== "string" || guard.blocked.has(id))) {
+      for (const blockedId of typeof id === "string" ? [id] : guard.blocked) guard.hit.add(blockedId);
       throw new Error("wa-export: re-upload request blocked");
     }
     return original(msg);
@@ -87,9 +88,9 @@ class NotInOpenChat extends Error {
 function serializedIdFor(wpp: WppLike, domId: string): string {
   if (/^(true|false)_/.test(domId)) return domId;
   const chatId = idToString(wpp.chat.getActiveChat()?.id);
-  const model = wpp.whatsapp.MsgStore.getModelsArray().find(
-    (m) => m?.id?.id === domId && idToString(m.id.remote) === chatId,
-  );
+  const candidates = wpp.whatsapp.MsgStore.getModelsArray().filter((m) => m?.id?.id === domId);
+  // Prefer the open chat; a lone match is still ours (older messages of a chat moved to @lid keep an @c.us remote).
+  const model = candidates.find((m) => idToString(m.id.remote) === chatId) ?? (candidates.length === 1 ? candidates[0] : undefined);
   const serialized = model ? idToString(model.id) : null;
   if (!serialized) throw new NotInOpenChat();
   return serialized;

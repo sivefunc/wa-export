@@ -120,6 +120,27 @@ describe("collect", () => {
     expect(res.bundle.problems).toEqual([{ messageId: a.id, code: problemCode, detail: "detail text" }]);
   });
 
+  it("an unsupported message type becomes a problem on the record and in the bundle", async () => {
+    const poll = msg({ type: "poll_creation", text: "" });
+    const res = await collect(options(fakeRpc([poll]).rpc, [poll.id]));
+    if (!res.ok) throw new Error("expected ok");
+    expect(res.bundle.problems).toEqual([{ messageId: poll.id, code: "unsupported_type", detail: "poll_creation" }]);
+    expect(res.bundle.records[0].problems).toEqual(res.bundle.problems);
+  });
+
+  it("deleted messages and plain text are not problems", async () => {
+    const [del, text] = [msg({ type: "revoked", text: "" }), msg()];
+    const res = await collect(options(fakeRpc([del, text]).rpc, [del.id, text.id]));
+    expect(res.ok && res.bundle.problems).toEqual([]);
+  });
+
+  it("gives big files more time: the media timeout grows with the file size", async () => {
+    const big = image({ media: media("video", { mime: "video/mp4", size: 400 * 1024 * 1024 }) });
+    const { rpc, calls } = fakeRpc([big]);
+    await collect(options(rpc, [big.id]));
+    expect(calls.find((c) => c.op === "GET_MEDIA")!.timeoutMs).toBeGreaterThan(10 * 60_000);
+  });
+
   it("message_not_found failures go only in bundle.problems", async () => {
     const a = msg();
     const { rpc } = fakeRpc([a]);
@@ -210,12 +231,14 @@ describe("collect", () => {
     expect(calls.filter((c) => c.op === "GET_MESSAGES").map((c) => (c.req as any).ids.length)).toEqual([50, 50, 20]);
   });
 
-  it("uses 30 s timeouts for message ops and 60 s for media", async () => {
-    const a = image();
+  it("uses 30 s timeouts for message ops and about 60 s for a small file", async () => {
+    const a = image(); // 1000 bytes
     const { rpc, calls } = fakeRpc([a]);
     await collect(options(rpc, [a.id]));
     expect(calls.find((c) => c.op === "GET_MESSAGES")!.timeoutMs).toBe(30_000);
-    expect(calls.find((c) => c.op === "GET_MEDIA")!.timeoutMs).toBe(60_000);
+    const media = calls.find((c) => c.op === "GET_MEDIA")!.timeoutMs;
+    expect(media).toBeGreaterThanOrEqual(60_000);
+    expect(media).toBeLessThan(61_000);
   });
 
   it("reports progress in stages: reading messages, then downloading files", async () => {

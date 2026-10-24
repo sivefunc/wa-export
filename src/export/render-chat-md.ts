@@ -68,9 +68,10 @@ function renderMessage(r: ExportRecord): string {
   const line = mediaLine(r);
   if (line) parts.push(line);
   const file = r.media?.filename ? ` (${r.media.filename})` : "";
-  for (const p of r.problems) parts.push(`⚠️ ${mediaKindLabel(r.media?.kind)} missing${file}: ${problemText(p)}`);
+  const mediaProblems = r.problems.filter((p) => p.code !== "unsupported_type");
+  for (const p of mediaProblems) parts.push(`⚠️ ${mediaKindLabel(r.media?.kind)} missing${file}: ${problemText(p)}`);
   if (r.type === "revoked") parts.push("_(deleted message)_");
-  else if (!text && !r.media && !r.problems.length) parts.push(`_(unsupported message type: ${r.type})_`);
+  else if (!text && !r.media && !mediaProblems.length) parts.push(`_(unsupported message type: ${r.type})_`);
   return parts.join("\n\n");
 }
 
@@ -80,6 +81,7 @@ export function problemLines(b: ExportBundle): string[] {
   return b.problems.map((p) => {
     const r = p.messageId ? byId.get(p.messageId) : undefined;
     if (!r) return `Message ${p.messageId ?? "unknown"}: ${problemText(p)}`;
+    if (p.code === "unsupported_type") return `${senderOf(r)} at ${formatLocal(r.timestamp)}: ${p.detail} message ${problemText(p)}`;
     const file = r.media?.filename ? ` ${r.media.filename}` : "";
     return `${senderOf(r)} at ${formatLocal(r.timestamp)}: ${mediaKindLabel(r.media?.kind)}${file} ${problemText(p)}`;
   });

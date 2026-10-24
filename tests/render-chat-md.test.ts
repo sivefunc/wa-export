@@ -171,6 +171,16 @@ describe("renderChatMd", () => {
     expect(renderChatMd(bundle([record({ type: "poll_creation", text: "" })]))).toContain("_(unsupported message type: poll_creation)_");
   });
 
+  it("an unsupported_type problem renders the placeholder inline and a plain line in the problems list", () => {
+    const r = record({ type: "location", text: "", timestamp: T, sender: { jid: "1", name: "Ana" } }, { problems: [problem(null, "unsupported_type")] });
+    r.problems[0].messageId = r.id;
+    r.problems[0].detail = "location";
+    const md = renderChatMd(bundle([r]));
+    expect(md).toContain("_(unsupported message type: location)_");
+    expect(md).not.toContain("missing");
+    expect(problemLines(bundle([r]))).toEqual(["Ana at 2026-10-24 06:34: location message can't be exported yet"]);
+  });
+
   it("separates the header from messages with a rule", () => {
     expect(renderChatMd(bundle([record()]))).toMatch(/\n---\n\n## /);
   });

@@ -93,6 +93,26 @@ describe("normalizeMessage", () => {
     expect(m.quoted?.text).toBe("");
   });
 
+  it("a video note (ptv) is a video: no thumbnail text, media present", () => {
+    const m = normalizeMessage({ ...raw.voiceNote, type: "ptv", mimetype: "video/mp4" }, resolveName);
+    expect(m.media?.kind).toBe("video");
+    expect(JSON.stringify(m)).not.toContain(raw.BASE64_THUMBNAIL.slice(0, 40));
+  });
+
+  it.each(["location", "vcard", "poll_creation", "ciphertext", "product", "some_future_type"])(
+    "never uses body as text for a %s message",
+    (type) => {
+      const m = normalizeMessage({ ...raw.chatText, type, body: raw.BASE64_THUMBNAIL }, resolveName);
+      expect(m.text).toBe("");
+      expect(JSON.stringify(m)).not.toContain(raw.BASE64_THUMBNAIL.slice(0, 40));
+    },
+  );
+
+  it("never uses body as text for a quoted location", () => {
+    const m = normalizeMessage({ ...raw.replyWithQuote, quotedMsg: { type: "location", body: raw.BASE64_THUMBNAIL } }, resolveName);
+    expect(m.quoted?.text).toBe("");
+  });
+
   it("marks forwarded messages", () => {
     expect(normalizeMessage({ ...raw.chatText, isForwarded: true }, resolveName).isForwarded).toBe(true);
     expect(normalizeMessage(raw.chatText, resolveName).isForwarded).toBe(false);

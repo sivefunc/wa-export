@@ -5,6 +5,7 @@ const MEDIA_KINDS: Record<string, MediaKind> = {
   image: "image",
   video: "video",
   ptt: "voice",
+  ptv: "video", // round video note
   audio: "audio",
   document: "document",
   sticker: "sticker",
@@ -36,10 +37,13 @@ function toNumber(value: unknown): number | null {
   return typeof n === "number" && Number.isFinite(n) ? n : null;
 }
 
-/** For media messages `body` holds non-text data (e.g. a base64 thumbnail), so only `caption` is text. */
+/** Types whose `body` is the user's text. Everywhere else `body` may be a thumbnail or raw data. */
+const TEXT_BODY_TYPES = new Set(["chat"]);
+
+/** Media text is the caption; other types only count as text when listed above. */
 function textOf(raw: any): string {
-  const kind = mediaKindOf(raw?.type ?? "");
-  const value = kind ? raw?.caption : raw?.body;
+  const type = raw?.type ?? "";
+  const value = mediaKindOf(type) ? raw?.caption : TEXT_BODY_TYPES.has(type) ? raw?.body : null;
   return typeof value === "string" ? value : "";
 }
 

@@ -84,6 +84,25 @@ describe("isSelectionModeActive", () => {
     expect(isSelectionModeActive(document)).toBe(true);
   });
 
+  it("a poll's option checkboxes in one message don't count as select mode", () => {
+    for (const [i, id] of ["A", "B", "C", "D"].entries()) {
+      const row = document.createElement("div");
+      row.dataset.id = id;
+      row.dataset.testid = `conv-msg-${id}`;
+      main().append(row);
+      setBox(row, { top: 100 + i * 60, height: 50 });
+    }
+    const pollRow = main().querySelector('[data-id="B"]')!;
+    for (const k of [0, 1]) {
+      const opt = document.createElement("input");
+      opt.type = "checkbox";
+      opt.setAttribute("aria-checked", "true");
+      pollRow.append(opt);
+      setBox(opt, { top: 165 + k * 10, height: 10 });
+    }
+    expect(isSelectionModeActive(document)).toBe(false);
+  });
+
   it("ignores checkboxes outside #main, like the login page's", () => {
     document.body.innerHTML = '<label><input type="checkbox" aria-checked="true"></label>';
     setBox(document.querySelector("input")!, { top: 10, height: 20 });

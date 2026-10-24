@@ -148,8 +148,25 @@ describe("handlers", () => {
     });
   });
 
-  it("GET_MESSAGES reports a bare id missing from the active chat as message_not_found", async () => {
-    const wpp = fakeWpp({}, {}, [storeModel("AC9F", "other@lid")]);
+  it("finds an older message whose remote is the chat's pre-LID @c.us id", async () => {
+    // A chat moved to @lid can still hold older messages keyed by @c.us.
+    const old = { ...raw.chatText, id: { id: "OLDMSG", remote: { _serialized: "555@c.us" }, $1: "false_555@c.us_OLDMSG" } };
+    const wpp = fakeWpp({ [old.id.$1]: old }, {}, [old]);
+    const res = await createHandlers(() => wpp).GET_MESSAGES({ ids: ["OLDMSG"] });
+    expect(res.failures).toEqual([]);
+    expect(res.messages[0].id).toBe("OLDMSG");
+  });
+
+  it("prefers the open chat when the same bare id exists in two chats", async () => {
+    const here = { ...raw.chatText, body: "here", id: { id: "DUP", remote: { _serialized: "self@lid" }, $1: "true_self@lid_DUP" } };
+    const there = { ...raw.chatText, body: "there", id: { id: "DUP", remote: { _serialized: "other@lid" }, $1: "true_other@lid_DUP" } };
+    const wpp = fakeWpp({ [here.id.$1]: here, [there.id.$1]: there }, {}, [there, here]);
+    const res = await createHandlers(() => wpp).GET_MESSAGES({ ids: ["DUP"] });
+    expect(res.messages[0].text).toBe("here");
+  });
+
+  it("GET_MESSAGES reports a bare id that isn't in the store as message_not_found", async () => {
+    const wpp = fakeWpp({}, {}, [storeModel("OTHER", "self@lid")]);
     const res = await createHandlers(() => wpp).GET_MESSAGES({ ids: ["AC9F"] });
     expect(res.failures).toEqual([{ id: "AC9F", code: "message_not_found", detail: "not in the open chat" }]);
   });
@@ -221,6 +238,20 @@ describe("re-upload guard", () => {
     });
     const mgrHolder = { current: mgr };
     const err = await createHandlers(() => wpp, () => mgrHolder.current).GET_MEDIA({ id: key }).catch((e) => e);
+    expect(err.code).toBe("media_expired");
+    expect(mgr.sent).toEqual([]);
+  });
+
+  it("fails closed: during an export download, a re-upload call with an unreadable id is blocked", async () => {
+    const mgr = fakeReuploadManager();
+    const msg = oldImage();
+    const wpp = fakeWpp({ [key]: msg }, {
+      downloadMedia: async () => {
+        await mgr.requestMediaReupload({ msg }); // an argument shape WhatsApp might switch to
+        throw new Error("unreachable");
+      },
+    });
+    const err = await createHandlers(() => wpp, () => mgr).GET_MEDIA({ id: key }).catch((e) => e);
     expect(err.code).toBe("media_expired");
     expect(mgr.sent).toEqual([]);
   });

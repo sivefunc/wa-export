@@ -7,6 +7,7 @@ const TEXT: Record<ProblemCode, string> = {
   view_once_skipped: "view-once media, skipped on purpose",
   message_not_found: "this message could not be read",
   media_error: "could not be exported",
+  unsupported_type: "can't be exported yet",
 };
 
 const KIND_LABELS: Record<MediaKind, string> = {

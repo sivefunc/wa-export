@@ -23,10 +23,20 @@ function isVisible(el: Element): boolean {
   return style?.display !== "none" && style?.visibility !== "hidden";
 }
 
-/** Select mode exists only inside an open chat; checkboxes elsewhere (e.g. the login page) don't count. */
+/**
+ * Select mode exists only inside an open chat (the login page's checkbox doesn't count), and gives
+ * every message a checkbox. A poll's option checkboxes sit inside one message, so require most
+ * visible messages to have one, unless checkboxes sit beside the messages rather than inside them.
+ */
 export function isSelectionModeActive(doc: Document): boolean {
   const root = doc.querySelector(SEL.chatRoot);
-  return !!root && [...root.querySelectorAll(SEL.checkbox)].some(isVisible);
+  if (!root) return false;
+  const boxes = [...root.querySelectorAll(SEL.checkbox)].filter(isVisible);
+  if (!boxes.length) return false;
+  if (boxes.some((b) => !b.closest(SEL.messageRow))) return true;
+  const rows = [...root.querySelectorAll(SEL.messageRow)];
+  const withBox = rows.filter((row) => boxes.some((b) => row.contains(b))).length;
+  return withBox / rows.length >= 0.5;
 }
 
 /** The row's checkbox: nested inside it, else the nearest visible one beside it on screen. */
