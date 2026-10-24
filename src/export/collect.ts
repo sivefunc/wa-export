@@ -6,6 +6,18 @@ import { applyOrdering } from "./orderings";
 
 export const WARN_BYTES = 500 * 1024 * 1024;
 export const MAX_BYTES = 1.5 * 1024 ** 3;
+/** Media size above which the user is asked to confirm, and above which the export is refused. */
+export interface SizeLimits {
+  warnBytes: number;
+  maxBytes: number;
+  hint: string; // what to do instead, shown with the refusal
+}
+
+const DEFAULT_LIMITS: SizeLimits = { warnBytes: WARN_BYTES, maxBytes: MAX_BYTES, hint: "Select fewer large files." };
+
+export function formatBytes(bytes: number): string {
+  return bytes >= 1024 ** 3 ? `${(bytes / 1024 ** 3).toFixed(1)} GB` : `${Math.round(bytes / (1024 * 1024))} MB`;
+}
 
 const MESSAGE_TIMEOUT_MS = 30_000;
 const MEDIA_TIMEOUT_MS = 60_000;
@@ -36,6 +48,7 @@ export interface CollectOptions {
   orderingId: string;
   confirmLargeExport(totalBytes: number): Promise<boolean>;
   onProgress(p: CollectProgress): void;
+  limits?: SizeLimits; // default WARN_BYTES / MAX_BYTES
   concurrency?: number; // default 3
   now?: () => Date;
 }
@@ -99,12 +112,13 @@ export async function collect(o: CollectOptions): Promise<CollectResult> {
     }
   }
 
+  const limits = o.limits ?? DEFAULT_LIMITS;
   const totalBytes = records.reduce((sum, r) => sum + (r.media?.size ?? 0), 0);
-  if (totalBytes > MAX_BYTES) {
-    const gb = (totalBytes / 1024 ** 3).toFixed(1);
-    return fatal("too_large", `This export is ${gb} GB, over the 1.5 GB limit. Select fewer large files.`);
+  if (totalBytes > limits.maxBytes) {
+    const size = formatBytes(totalBytes);
+    return fatal("too_large", `This export is ${size}, over the ${formatBytes(limits.maxBytes)} limit. ${limits.hint}`);
   }
-  if (totalBytes > WARN_BYTES && !(await o.confirmLargeExport(totalBytes))) {
+  if (totalBytes > limits.warnBytes && !(await o.confirmLargeExport(totalBytes))) {
     return fatal("cancelled", "Export cancelled.");
   }
 

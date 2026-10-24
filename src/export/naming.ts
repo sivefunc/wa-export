@@ -60,8 +60,8 @@ export function assignMediaPaths(records: WaMessage[]): Map<string, string> {
 
 const pad = (n: number) => String(n).padStart(2, "0");
 
-export function exportFilename(chatName: string | null, at: Date): string {
+export function exportFilename(chatName: string | null, at: Date, ext = "zip"): string {
   const name = chatName ? sanitizeFilename(chatName, 60) : "whatsapp-export";
   const stamp = `${at.getFullYear()}-${pad(at.getMonth() + 1)}-${pad(at.getDate())}-${pad(at.getHours())}${pad(at.getMinutes())}`;
-  return `${name}-${stamp}.zip`;
+  return `${name}-${stamp}.${ext}`;
 }
