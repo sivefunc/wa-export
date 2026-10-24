@@ -49,6 +49,7 @@ export function createExportController(d: ControllerDeps) {
           ids: [...selection.ids],
           orderingId: settings.order,
           limits: writer.limits,
+          avatars: writer.wantsAvatars ?? false,
           onProgress: (p) => set({ kind: "working", ...p }),
           confirmLargeExport: (bytes) =>
             new Promise<boolean>((resolve) => {

@@ -25,6 +25,7 @@ describe("html writer", () => {
   it("is registered with its file type and lower size limits", () => {
     const w = writers.html;
     expect(w.fileType).toBe("HTML");
+    expect(w.wantsAvatars).toBe(true);
     expect(w.label).toBe("HTML (WhatsApp look, opens in any browser)");
     expect(w.limits).toEqual({ warnBytes: 200 * 1024 * 1024, maxBytes: 500 * 1024 * 1024, hint: "Select fewer large files, or export as ZIP." });
   });

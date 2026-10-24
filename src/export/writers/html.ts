@@ -16,6 +16,7 @@ export const htmlWriter: Writer = {
   id: "html",
   label: "HTML (WhatsApp look, opens in any browser)",
   fileType: "HTML",
+  wantsAvatars: true,
   // Base64 adds a third, and the browser opening the page holds all of it in memory.
   limits: { warnBytes: 200 * 1024 * 1024, maxBytes: 500 * 1024 * 1024, hint: "Select fewer large files, or export as ZIP." },
   async write(b, onProgress) {

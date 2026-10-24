@@ -8,6 +8,7 @@ export interface Writer {
   label: string;
   fileType: string; // short name for progress, e.g. "ZIP"
   limits: SizeLimits;
+  wantsAvatars?: boolean; // collect profile pictures into bundle.avatars
   write(b: ExportBundle, onProgress?: (percent: number) => void): Promise<{ blob: Blob; filename: string }>;
 }
 
