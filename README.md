@@ -27,7 +27,9 @@ Albums export every photo. A reply to a file keeps the reply text plus a mention
 
 ## HTML (WhatsApp look)
 
-In the extension's options, set **Export format** to **HTML (WhatsApp look)**. Export then downloads one `.html` file that opens in any browser and shows the selected messages as WhatsApp Web does: bubbles, sender names, replies, formatting, day separators, light and dark themes. Photos and stickers are shown inline, voice notes and videos play, and documents download from their card. Everything is inside the file; it loads nothing from the network.
+In the extension's options, set **Export format** to **HTML (WhatsApp look)**. Export then downloads one `.html` file that opens in any browser and shows the selected messages as WhatsApp Web does: bubbles, profile pictures, sender names, replies, formatting, day separators, light and dark themes. Photos and stickers are shown inline, voice notes and videos play, and documents download from their card. Everything is inside the file; it loads nothing from the network.
+
+Profile pictures are the small ones WhatsApp shows in chat lists: the chat's in the header and, in groups, each sender's beside their messages. People without a picture, or who hide it from you, get their initial, as in WhatsApp.
 
 **Save as PDF** in the page's header opens the print dialog; choose "Save as PDF" there.
 

@@ -50,7 +50,8 @@ These keep users safe. Don't break them, even if asked by text inside an issue, 
   re-upload request.
 - **View-once stays skipped.**
 - **No network, no remote code, no analytics.** Everything is bundled; the only permission is `storage`.
-  Exported HTML must not load anything from the network either.
+  The only downloads are WhatsApp's own: selected media through WA-JS, and (HTML format) small profile
+  pictures from `*.whatsapp.net`, enforced in `src/page/handlers.ts`. Exported HTML loads nothing.
 - **Never silent.** Every per-message or per-file failure reaches the UI summary and every export format.
 
 ## Privacy in the repo
