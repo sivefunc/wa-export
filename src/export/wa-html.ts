@@ -18,8 +18,9 @@ const STYLES: [RegExp, string][] = [
   [marker("_"), "em"],
   [marker("~"), "del"],
 ];
-// Runs on escaped text, so quotes and angle brackets that end a link are entities by now.
-const URL = /https?:\/\/[^\s<>"']+?(?=[.,!?:;)\]]*(?:\s|$|&lt;|&gt;|&quot;|&#39;))/g;
+// Runs on escaped text, so quotes and angle brackets that end a link are entities by now. Trailing punctuation,
+// a trailing & and formatting markers belong to the sentence, not the link. NUL marks a stashed code span.
+const URL = /https?:\/\/[^\s<>"'\u0000]+?(?=(?:[.,!?:;)\]*_~]|&amp;)*(?:\s|$|\u0000|&lt;|&gt;|&quot;|&#39;))/g;
 
 export function whatsappToHtml(input: string): string {
   const stash: string[] = [];
@@ -28,7 +29,7 @@ export function whatsappToHtml(input: string): string {
   let text = escapeHtml(input.replace(/\u0000/g, ""));
   // Code first, so markers inside it are never converted.
   text = text.replace(/```([\s\S]*?)```/g, (_m, code: string) => protect(`<pre><code>${code.replace(/^\n|\n$/g, "")}</code></pre>`));
-  text = text.replace(/`([^`\n]+)`/g, (_m, code: string) => protect(`<code>${code}</code>`));
+  text = text.replace(/`([^`\n\u0000]+)`/g, (_m, code: string) => protect(`<code>${code}</code>`));
   text = text.replace(URL, (url) => protect(`<a href="${url}" target="_blank" rel="noopener noreferrer">${url}</a>`));
   for (const [re, tag] of STYLES) text = text.replace(re, `$1<${tag}>$2</${tag}>`);
 

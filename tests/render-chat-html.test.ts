@@ -117,6 +117,22 @@ describe("renderChatHtml", () => {
     expect(doc.querySelector(".quote-text")!.textContent).toBe("🎥 Video");
   });
 
+  it("the reply bar has the same color as the quoted sender's name", () => {
+    const ana = { jid: "123@c.us", name: "Ana" };
+    const { doc } = render(
+      bundle([
+        record({ timestamp: T, sender: ana }),
+        record({ timestamp: T, sender: { jid: "456@c.us", name: "Luis" }, quoted: { id: "Q", fromMe: false, senderName: "Ana", timestamp: null, text: "hi", kind: null } }),
+      ]),
+    );
+    const nameColor = doc.querySelector<HTMLElement>(".name")!.style.color;
+    const bar = doc.querySelector<HTMLElement>(".quote")!.style.getPropertyValue("--bar");
+    const normalized = new Option().style;
+    normalized.color = bar;
+    expect(nameColor).toBeTruthy();
+    expect(normalized.color).toBe(nameColor);
+  });
+
   it("a reply to captioned media shows the media icon before the caption", () => {
     const { doc } = render(
       bundle([record({ timestamp: T, quoted: { id: "Q", fromMe: false, senderName: "Ana", timestamp: null, text: "the plan", kind: "image" } })]),
