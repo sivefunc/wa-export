@@ -26,6 +26,8 @@ WhatsApp Web 2.3000.1051605128 · WA-JS 4.7.2 · tested 2026-10-24 on the owner'
 | Group chat, other members' messages | ✅ | | senders with `@lid` ids resolved to their profile names; received image at full size; long formatted message intact |
 | 1:1 chat with an unsaved contact | ✅ | | name from their WhatsApp profile name; links kept as text |
 | Edited message | ✅ | | final text exported (no "edited" mark yet) |
+| HTML format: page opens, media shows and plays | | | pending live run; fictional sample checked in Chromium (light, dark, print to PDF) |
+| HTML format: Save as PDF | | | pending live run |
 
 ## Firefox notes
 

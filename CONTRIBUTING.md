@@ -29,7 +29,7 @@ entrypoints/wa-export.content.ts  ISOLATED world: selection tracker, UI, export 
 src/page/      ← WhatsApp internals (through WA-JS). Volatile.
 src/dom/       ← WhatsApp page markup (all selectors in selectors.ts). Volatile.
 src/bridge/    postMessage RPC between the two worlds
-src/export/    collect → order → write; Markdown/JSON renderers; writers
+src/export/    collect → order → write; Markdown/JSON/HTML renderers; writers
 src/ui/        Export button, states, controller
 ```
 
@@ -84,4 +84,5 @@ Use fictitious values in tests and docs, such as `+1 555-0100` and `123@c.us`. `
 
 - **Formats:** implement `Writer` (`src/export/writers/index.ts`) and register it in `writers`. The settings page lists it automatically.
 - **Orderings:** add an `Ordering` to `orderings` in `src/export/orderings.ts`.
-- Reuse `renderChatMd` / `renderMessagesJson`. Inside Firefox content scripts, copy page bytes with `structuredClone` before giving them to a library; see the comment in `writers/zip.ts`.
+- Declare `fileType` (shown as "Creating ZIP…") and `limits` (when to ask, when to refuse). `exportFilename(name, at, ext)` names the file.
+- Reuse `renderChatMd` / `renderMessagesJson` / `renderChatHtml` and `problemLines`, so every format reports the same problems. Inside Firefox content scripts, copy page bytes with `structuredClone` before giving them to a library; see the comment in `writers/zip.ts`.
