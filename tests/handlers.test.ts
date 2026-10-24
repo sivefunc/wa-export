@@ -298,3 +298,61 @@ describe("isExpiredMediaStage", () => {
     expect(isExpiredMediaStage(undefined)).toBe(false);
   });
 });
+
+describe("GET_AVATARS", () => {
+  const PIC = "https://pps.whatsapp.net/v/t61/pic.jpg?oe=1";
+  const urls: Record<string, string | undefined> = { "123@lid": PIC, "120363@g.us": "https://pps.whatsapp.net/v/t61/group.jpg" };
+
+  function setup(fetchImage: (url: string) => Promise<Response>) {
+    const wpp: any = fakeWpp({});
+    const asked: { jid: string; full: boolean }[] = [];
+    wpp.contact.getProfilePictureUrl = async (jid: string, full: boolean) => (asked.push({ jid, full }), urls[jid]);
+    return { handlers: createHandlers(() => wpp, () => null, fetchImage), asked };
+  }
+
+  const jpeg = (bytes: number[]) => async () => new Response(new Uint8Array(bytes), { headers: { "content-type": "image/jpeg" } });
+
+  it("returns the small picture of each jid that has one", async () => {
+    const fetched: string[] = [];
+    const { handlers, asked } = setup(async (url) => (fetched.push(url), jpeg([1, 2, 3])()));
+    const res = await handlers.GET_AVATARS({ jids: ["123@lid", "456@lid", "120363@g.us"] });
+    expect(asked.every((a) => a.full === false)).toBe(true);
+    expect(fetched.sort()).toEqual([PIC, urls["120363@g.us"]].sort());
+    expect(res.avatars.map((a) => a.jid).sort()).toEqual(["120363@g.us", "123@lid"]);
+    const a = res.avatars.find((x) => x.jid === "123@lid")!;
+    expect(a.mime).toBe("image/jpeg");
+    expect([...new Uint8Array(a.buffer)]).toEqual([1, 2, 3]);
+  });
+
+  it("only fetches from WhatsApp's picture servers", async () => {
+    urls["evil@lid"] = "https://attacker.example/x.jpg";
+    urls["http@lid"] = "http://pps.whatsapp.net/x.jpg";
+    urls["suffix@lid"] = "https://pps.whatsapp.net.attacker.example/x.jpg";
+    const fetched: string[] = [];
+    const { handlers } = setup(async (url) => (fetched.push(url), jpeg([1])()));
+    const res = await handlers.GET_AVATARS({ jids: ["evil@lid", "http@lid", "suffix@lid"] });
+    expect(fetched).toEqual([]);
+    expect(res.avatars).toEqual([]);
+  });
+
+  it("skips failures, non-images and pictures over 1 MB without failing the rest", async () => {
+    urls["a@lid"] = "https://pps.whatsapp.net/a.jpg";
+    urls["b@lid"] = "https://pps.whatsapp.net/b.jpg";
+    urls["c@lid"] = "https://pps.whatsapp.net/c.jpg";
+    urls["d@lid"] = "https://pps.whatsapp.net/d.jpg";
+    const { handlers } = setup(async (url) => {
+      if (url.endsWith("a.jpg")) throw new TypeError("network");
+      if (url.endsWith("b.jpg")) return new Response("<html>", { headers: { "content-type": "text/html" } });
+      if (url.endsWith("c.jpg")) return new Response(new Uint8Array(1024 * 1024 + 1), { headers: { "content-type": "image/jpeg" } });
+      return new Response(new Uint8Array([9]), { status: 200, headers: { "content-type": "image/jpeg" } });
+    });
+    const res = await handlers.GET_AVATARS({ jids: ["a@lid", "b@lid", "c@lid", "d@lid"] });
+    expect(res.avatars.map((a) => a.jid)).toEqual(["d@lid"]);
+  });
+
+  it("returns nothing when WA-JS has no getProfilePictureUrl", async () => {
+    const wpp: any = fakeWpp({});
+    const res = await createHandlers(() => wpp, () => null, jpeg([1])).GET_AVATARS({ jids: ["123@lid"] });
+    expect(res.avatars).toEqual([]);
+  });
+});

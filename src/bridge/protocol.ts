@@ -10,6 +10,8 @@ export interface Ops {
     res: { messages: WaMessage[]; failures: { id: string; code: "message_not_found"; detail: string }[] };
   };
   GET_MEDIA: { req: { id: string }; res: { mime: string; buffer: ArrayBuffer } };
+  // Small profile pictures; jids without one (none set, hidden from us, or failed) are left out.
+  GET_AVATARS: { req: { jids: string[] }; res: { avatars: { jid: string; mime: string; buffer: ArrayBuffer }[] } };
 }
 
 export type OpName = keyof Ops;
