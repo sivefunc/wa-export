@@ -23,6 +23,7 @@ function setup(result: CollectResult | (() => Promise<CollectResult>), write?: (
       id: "zip",
       label: "ZIP",
       fileType: "ZIP",
+      description: "d",
       limits: { warnBytes: 1, maxBytes: 2, hint: "h" },
       write:
         write ??

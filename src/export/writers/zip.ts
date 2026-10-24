@@ -9,6 +9,7 @@ export const zipWriter: Writer = {
   id: "zip",
   label: "ZIP (chat.md + messages.json + media/)",
   fileType: "ZIP",
+  description: "Markdown + files, for Claude Code",
   limits: { warnBytes: WARN_BYTES, maxBytes: MAX_BYTES, hint: "Select fewer large files." },
   async write(b, onProgress) {
     const zip = new JSZip();
