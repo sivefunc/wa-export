@@ -1,5 +1,13 @@
+import type { Settings } from "../settings";
 import { findForwardButton, toolbarSlot } from "./placement";
+import { readSettingsFields, settingsFieldsHtml } from "./settings-form";
 import { buttonLabel, progressFraction, type UiState } from "./state";
+
+/** Where the ⚙ panel reads and writes the same settings as the options page. */
+export interface SettingsAccess {
+  load(): Promise<Settings>;
+  save(s: Settings): Promise<void>;
+}
 
 export interface ExportUi {
   setState(s: UiState): void;
@@ -36,17 +44,41 @@ button:disabled { cursor: progress; }
 .panel li { margin: 2px 0; }
 .row { display: flex; gap: 8px; justify-content: flex-end; }
 .secondary { background: transparent; color: var(--text); border: 1px solid var(--border); }
+.buttons { display: flex; align-items: center; gap: 6px; }
+.settings { display: grid; place-items: center; width: 34px; height: 34px; padding: 0; background: transparent; color: var(--muted); }
+.settings:hover, .settings[aria-expanded="true"] { background: rgba(134, 150, 160, .18); color: var(--text); }
+.settings svg { width: 20px; height: 20px; fill: currentColor; }
+.settings-panel label { display: flex; flex-direction: column; gap: 4px; margin: 0 0 10px; font-weight: 600; }
+.settings-panel select { font: inherit; font-weight: 400; padding: 6px; min-width: 260px; border: 1px solid var(--border);
+  border-radius: 6px; background: var(--panel); color: var(--text); }
+.settings-panel [role="status"] { margin: 0; min-height: 1.35em; color: var(--muted); font-weight: 400; }
 `;
+
+const GEAR = `<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M19.4 13a7.8 7.8 0 0 0 0-2l2.1-1.6a.5.5 0 0 0 .1-.6l-2-3.5a.5.5 0 0 0-.6-.2l-2.5 1a7.3 7.3 0 0 0-1.7-1l-.4-2.6a.5.5 0 0 0-.5-.4h-4a.5.5 0 0 0-.5.4l-.4 2.6a7.3 7.3 0 0 0-1.7 1l-2.5-1a.5.5 0 0 0-.6.2l-2 3.5a.5.5 0 0 0 .1.6L4.6 11a7.8 7.8 0 0 0 0 2l-2.1 1.6a.5.5 0 0 0-.1.6l2 3.5c.1.2.4.3.6.2l2.5-1c.5.4 1.1.7 1.7 1l.4 2.6c0 .2.2.4.5.4h4c.3 0 .5-.2.5-.4l.4-2.6c.6-.3 1.2-.6 1.7-1l2.5 1c.2.1.5 0 .6-.2l2-3.5a.5.5 0 0 0-.1-.6L19.4 13ZM12 15.5a3.5 3.5 0 1 1 0-7 3.5 3.5 0 0 1 0 7Z"/></svg>`;
 
 const esc = (s: string) => s.replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c]!);
 
-function render(s: UiState): string {
+interface Extras {
+  gear: boolean;
+  settings: Settings | null; // the open ⚙ panel's values; null when closed
+}
+
+function settingsPanel(values: Settings): string {
+  return `<div class="panel settings-panel" role="dialog" aria-label="Export settings"><p>Export settings</p>
+    ${settingsFieldsHtml(values)}<p role="status" aria-live="polite"></p></div>`;
+}
+
+function render(s: UiState, x: Extras): string {
   const label = esc(buttonLabel(s));
   switch (s.kind) {
     case "hidden":
       return "";
-    case "idle":
-      return `<button class="export">${label}</button>`;
+    case "idle": {
+      const gear = x.gear
+        ? `<button class="settings" aria-label="Export settings" title="Export settings" aria-expanded="${x.settings ? "true" : "false"}">${GEAR}</button>`
+        : "";
+      return `${x.settings ? settingsPanel(x.settings) : ""}<div class="buttons"><button class="export">${label}</button>${gear}</div>`;
+    }
     case "working": {
       const pct = Math.round((progressFraction(s) ?? 0) * 100);
       return `<button class="export" disabled><span class="bar" role="progressbar" aria-valuemin="0" aria-valuemax="100"
@@ -64,18 +96,70 @@ function render(s: UiState): string {
   }
 }
 
-export function mountExportUi(doc: Document): ExportUi {
+export function mountExportUi(doc: Document, settingsAccess?: SettingsAccess): ExportUi {
   const host = doc.createElement("wa-export-ui");
   const shadow = host.attachShadow({ mode: "open" });
   const handlers = { export: () => {}, confirm: (_ok: boolean) => {}, dismiss: () => {} };
+  let state: UiState = { kind: "hidden" };
+  let settings: Settings | null = null; // non-null while the ⚙ panel is open
+  let opening = 0; // ignores a load that finishes after the panel was closed again
+
+  const draw = () => {
+    shadow.innerHTML = `<style>${STYLE}</style><div class="wrap">${render(state, { gear: !!settingsAccess, settings })}</div>`;
+    host.hidden = state.kind === "hidden";
+    place();
+  };
+
+  const onKey = (e: KeyboardEvent) => {
+    if (e.key === "Escape") closeSettings();
+  };
+  const onPointer = (e: Event) => {
+    if (!e.composedPath().includes(host)) closeSettings();
+  };
+  function closeSettings() {
+    opening++;
+    doc.removeEventListener("keydown", onKey, true);
+    doc.removeEventListener("pointerdown", onPointer, true);
+    if (!settings) return;
+    settings = null;
+    draw();
+  }
+  async function openSettings() {
+    if (!settingsAccess) return;
+    const ticket = ++opening;
+    const loaded = await settingsAccess.load();
+    if (ticket !== opening || state.kind !== "idle") return;
+    settings = loaded;
+    doc.addEventListener("keydown", onKey, true);
+    doc.addEventListener("pointerdown", onPointer, true);
+    draw();
+  }
 
   shadow.addEventListener("click", (event) => {
     const btn = (event.target as Element).closest("button");
     if (!btn || btn.disabled) return;
+    if (btn.classList.contains("settings")) return void (settings ? closeSettings() : openSettings());
     if (btn.classList.contains("continue")) handlers.confirm(true);
     else if (btn.classList.contains("cancel")) handlers.confirm(false);
     else if (btn.classList.contains("dismiss")) handlers.dismiss();
-    else if (btn.classList.contains("export")) handlers.export();
+    else if (btn.classList.contains("export")) {
+      closeSettings();
+      handlers.export();
+    }
+  });
+
+  shadow.addEventListener("change", async (event) => {
+    const panel = (event.target as Element).closest(".settings-panel");
+    if (!panel || !settingsAccess) return;
+    const next = readSettingsFields(panel);
+    settings = next;
+    const status = panel.querySelector<HTMLElement>("[role=status]")!;
+    try {
+      await settingsAccess.save(next);
+      status.textContent = "Saved";
+    } catch {
+      status.textContent = "Couldn't save";
+    }
   });
 
   const place = () => {
@@ -92,14 +176,17 @@ export function mountExportUi(doc: Document): ExportUi {
 
   return {
     setState(s) {
-      shadow.innerHTML = `<style>${STYLE}</style><div class="wrap">${render(s)}</div>`;
-      host.hidden = s.kind === "hidden";
-      place();
+      state = s;
+      if (s.kind !== "idle" && settings) closeSettings();
+      draw();
     },
     place,
     onExport: (fn) => void (handlers.export = fn),
     onConfirm: (fn) => void (handlers.confirm = fn),
     onDismiss: (fn) => void (handlers.dismiss = fn),
-    destroy: () => host.remove(),
+    destroy: () => {
+      closeSettings();
+      host.remove();
+    },
   };
 }

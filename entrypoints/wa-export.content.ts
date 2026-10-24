@@ -2,7 +2,7 @@ import { createRpcClient, windowTransport } from "../src/bridge/rpc";
 import { SelectionTracker } from "../src/dom/selection-tracker";
 import { collect } from "../src/export/collect";
 import { getWriter } from "../src/export/writers";
-import { loadSettings } from "../src/settings";
+import { loadSettings, settingsItem } from "../src/settings";
 import { createExportController } from "../src/ui/controller";
 import { mountExportUi } from "../src/ui/export-ui";
 import { saveBlob } from "../src/ui/save";
@@ -12,7 +12,7 @@ export default defineContentScript({
   runAt: "document_idle",
   main(ctx) {
     const rpc = createRpcClient(windowTransport("content"));
-    const ui = mountExportUi(document);
+    const ui = mountExportUi(document, { load: loadSettings, save: (s) => settingsItem.setValue(s) });
     const controller = createExportController({
       setState: ui.setState,
       loadSettings,
