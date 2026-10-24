@@ -1,0 +1,8 @@
+{
+  "manifest_version": 3,
+  "name": "wa-export firefox smoke",
+  "version": "1.0",
+  "browser_specific_settings": { "gecko": { "id": "wa-export-smoke@example.org" } },
+  "host_permissions": ["https://example.com/*"],
+  "content_scripts": [{ "matches": ["https://example.com/*"], "js": ["writer.js", "smoke.js"], "run_at": "document_idle" }]
+}
