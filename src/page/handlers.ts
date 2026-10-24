@@ -94,6 +94,38 @@ function serializedIdFor(wpp: WppLike, domId: string): string {
   return serialized;
 }
 
+/** The album a message belongs to: the album itself, or a photo of one. Observed live 2026-10-24. */
+function albumIdOf(raw: any): string | null {
+  if (raw?.type === "album") return raw.id?.id ?? null;
+  if (raw?.associationType === "MEDIA_ALBUM") return raw.parentMsgKey?.id ?? null;
+  return null;
+}
+
+function albumPhotos(wpp: WppLike, albumId: string): any[] {
+  const chatId = idToString(wpp.chat.getActiveChat()?.id);
+  return wpp.whatsapp.MsgStore.getModelsArray().filter(
+    (m) => m?.associationType === "MEDIA_ALBUM" && m.parentMsgKey?.id === albumId && idToString(m.id?.remote) === chatId,
+  );
+}
+
+/** The DOM shows an album as one row; selecting it means every photo in it, each once. */
+function expandAlbums(wpp: WppLike, found: { id: string; raw: any }[]): { id: string; raw: any }[] {
+  const out: { id: string; raw: any }[] = [];
+  const seen = new Set<string>();
+  const add = (id: string, raw: any) => {
+    if (seen.has(id)) return;
+    seen.add(id);
+    out.push({ id, raw });
+  };
+  for (const item of found) {
+    const albumId = albumIdOf(item.raw);
+    const photos = albumId ? albumPhotos(wpp, albumId) : [];
+    if (photos.length) photos.forEach((p) => add(p.id.id, p));
+    else add(item.id, item.raw);
+  }
+  return out;
+}
+
 function errorText(err: unknown): string {
   if (err instanceof Error) return err.message;
   if (err && typeof err === "object") {
@@ -166,8 +198,9 @@ export function createHandlers(
         else failures.push({ id: ids[i], code: "message_not_found", detail: r.status === "rejected" ? errorText(r.reason) : "empty result" });
       });
 
+      const messagesFound = expandAlbums(wpp, found);
       const jids = new Set<string>();
-      for (const { raw } of found) {
+      for (const { raw } of messagesFound) {
         const sender = senderJidOf(raw);
         const quoted = idToString(raw?.quotedParticipant);
         if (sender) jids.add(sender);
@@ -177,7 +210,7 @@ export function createHandlers(
       await Promise.all([...jids].map(async (jid) => names.set(jid, await contactName(wpp, jid))));
 
       // The DOM data-id is the join key for selection and media, so it wins over the model's own id.
-      const messages = found.map(({ id, raw }) => ({ ...normalizeMessage(raw, (jid) => names.get(jid) ?? null), id }));
+      const messages = messagesFound.map(({ id, raw }) => ({ ...normalizeMessage(raw, (jid) => names.get(jid) ?? null), id }));
       return { messages, failures };
     },
 

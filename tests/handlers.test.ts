@@ -101,6 +101,46 @@ describe("handlers", () => {
     expect(res.messages[0].type).toBe("ptt");
   });
 
+  describe("albums", () => {
+    // Live 2026-10-24: an album is a type "album" message; its photos carry
+    // associationType "MEDIA_ALBUM" and parentMsgKey → the album. The DOM row shows one photo's id.
+    const photo = (bare: string) => ({
+      ...raw.imageWithCaption,
+      caption: `photo ${bare}`,
+      id: { id: bare, fromMe: false, remote: { _serialized: "self@lid" }, $1: `true_self@lid_${bare}_out` },
+      associationType: "MEDIA_ALBUM",
+      parentMsgKey: { id: "ALB" },
+    });
+    const album = { type: "album", t: 1, id: { id: "ALB", remote: { _serialized: "self@lid" }, $1: "true_self@lid_ALB_out" } };
+    const setup = () => {
+      const [p1, p2] = [photo("P1"), photo("P2")];
+      const byKey = { [p1.id.$1]: p1, [p2.id.$1]: p2, [album.id.$1]: album };
+      return createHandlers(() => fakeWpp(byKey, {}, [album, p1, p2]));
+    };
+
+    it("a selected album photo expands to every photo of its album", async () => {
+      const res = await setup().GET_MESSAGES({ ids: ["P1"] });
+      expect(res.messages.map((m) => [m.id, m.text])).toEqual([["P1", "photo P1"], ["P2", "photo P2"]]);
+      expect(res.failures).toEqual([]);
+    });
+
+    it("a selected album container expands to its photos", async () => {
+      const res = await setup().GET_MESSAGES({ ids: ["ALB"] });
+      expect(res.messages.map((m) => m.id)).toEqual(["P1", "P2"]);
+    });
+
+    it("an album whose photos aren't loaded stays in the export instead of vanishing", async () => {
+      const h = createHandlers(() => fakeWpp({ [album.id.$1]: album }, {}, [album]));
+      const res = await h.GET_MESSAGES({ ids: ["ALB"] });
+      expect(res.messages.map((m) => [m.id, m.type])).toEqual([["ALB", "album"]]);
+    });
+
+    it("photos reached twice are exported once", async () => {
+      const res = await setup().GET_MESSAGES({ ids: ["P2", "ALB", "P1"] });
+      expect(res.messages.map((m) => m.id)).toEqual(["P1", "P2"]);
+    });
+  });
+
   it("GET_MESSAGES reports a bare id missing from the active chat as message_not_found", async () => {
     const wpp = fakeWpp({}, {}, [storeModel("AC9F", "other@lid")]);
     const res = await createHandlers(() => wpp).GET_MESSAGES({ ids: ["AC9F"] });
