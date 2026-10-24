@@ -1,5 +1,5 @@
 import JSZip from "jszip";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { DEFAULT_WRITER, getWriter, writers } from "../src/export/writers";
 import type { ExportBundle } from "../src/types";
 import { media, record } from "./fixtures/messages";
@@ -67,6 +67,20 @@ describe("zip writer", () => {
     await getWriter("zip").write(bundle(), (pct) => seen.push(pct));
     expect(seen.at(-1)).toBe(100);
     expect(seen).toEqual([...seen].sort((a, b) => a - b));
+  });
+
+  it("hands JSZip own-realm byte copies, never Blobs or page buffers (Firefox)", async () => {
+    // Firefox content scripts: buffers from the page (postMessage, Blob reads) deny
+    // `.constructor` to JSZip, which then hangs at 33% without an error.
+    // A structuredClone made in the content script works.
+    const file = vi.spyOn(JSZip.prototype, "file");
+    const clone = vi.spyOn(globalThis, "structuredClone");
+    await getWriter("zip").write(bundle());
+    const media = file.mock.calls.find(([path]) => path === "media/001-photo.jpg")!;
+    expect(media[1]).toBeInstanceOf(Uint8Array);
+    expect(clone).toHaveBeenCalledWith(expect.any(ArrayBuffer));
+    file.mockRestore();
+    clone.mockRestore();
   });
 
   it("unknown writer id falls back to zip", () => {
