@@ -1,5 +1,5 @@
 import { findForwardButton, toolbarSlot } from "./placement";
-import { buttonLabel, type UiState } from "./state";
+import { buttonLabel, progressFraction, type UiState } from "./state";
 
 export interface ExportUi {
   setState(s: UiState): void;
@@ -24,8 +24,10 @@ const STYLE = `
 :host([hidden]) { display: none !important; }
 :host([data-placement="toolbar"]) .panel { position: absolute; right: 0; bottom: calc(100% + 8px); }
 button { font: inherit; cursor: pointer; border: 0; border-radius: 18px; padding: 7px 14px; }
-button:disabled { cursor: progress; opacity: .8; }
-.export { background: var(--accent); color: var(--accent-text); font-weight: 600; white-space: nowrap; box-shadow: 0 1px 3px rgba(0,0,0,.25); }
+button:disabled { cursor: progress; }
+.export .label { position: relative; }
+.export .bar { position: absolute; inset: 0 auto 0 0; background: rgba(255,255,255,.28); transition: width .2s ease; }
+.export { position: relative; overflow: hidden; background: var(--accent); color: var(--accent-text); font-weight: 600; white-space: nowrap; box-shadow: 0 1px 3px rgba(0,0,0,.25); }
 .panel { background: var(--panel); color: var(--text); border: 1px solid var(--border); border-radius: 12px;
   padding: 12px 14px; width: max-content; max-width: min(420px, 80vw); box-shadow: 0 4px 16px rgba(0,0,0,.25); }
 .panel p { margin: 0 0 8px; font-weight: 600; }
@@ -45,8 +47,11 @@ function render(s: UiState): string {
       return "";
     case "idle":
       return `<button class="export">${label}</button>`;
-    case "working":
-      return `<button class="export" disabled>${label}</button>`;
+    case "working": {
+      const pct = Math.round((progressFraction(s) ?? 0) * 100);
+      return `<button class="export" disabled><span class="bar" role="progressbar" aria-valuemin="0" aria-valuemax="100"
+        aria-valuenow="${pct}" style="width: ${pct}%"></span><span class="label">${label}</span></button>`;
+    }
     case "confirm":
       return `<div class="panel"><p>${label}</p><div class="row">
         <button class="secondary cancel">Cancel</button><button class="export continue">Continue</button></div></div>`;

@@ -1,13 +1,16 @@
 import { beforeEach, describe, expect, it } from "vitest";
 import { fakeBrowser } from "wxt/testing/fake-browser";
 import { DEFAULT_SETTINGS, loadSettings, settingsItem } from "../src/settings";
-import { buttonLabel } from "../src/ui/state";
+import { buttonLabel, progressFraction } from "../src/ui/state";
 
 describe("buttonLabel", () => {
   it.each([
     [{ kind: "idle", count: 3 }, "Export 3"],
     [{ kind: "idle", count: 0 }, "Export"],
-    [{ kind: "working", done: 7, total: 12 }, "Exporting 7/12…"],
+    [{ kind: "working", stage: "reading", done: 0, total: 3 }, "Reading 3 messages…"],
+    [{ kind: "working", stage: "reading", done: 0, total: 1 }, "Reading 1 message…"],
+    [{ kind: "working", stage: "downloading", done: 1, total: 2 }, "Downloading files 1/2…"],
+    [{ kind: "working", stage: "zipping", done: 45, total: 100 }, "Creating ZIP… 45%"],
     [{ kind: "confirm", bytes: 620 * 1024 * 1024 }, "This export is 620 MB. Continue?"],
     [{ kind: "confirm", bytes: 1.2 * 1024 ** 3 }, "This export is 1.2 GB. Continue?"],
     [{ kind: "done", messages: 12, problems: ["a", "b"] }, "Exported 12 messages · 2 problems"],
@@ -17,6 +20,14 @@ describe("buttonLabel", () => {
     [{ kind: "hidden" }, ""],
   ] as const)("%j → %s", (state, label) => {
     expect(buttonLabel(state as any)).toBe(label);
+  });
+});
+
+describe("progressFraction", () => {
+  it("is the share done while working, else null", () => {
+    expect(progressFraction({ kind: "working", stage: "downloading", done: 1, total: 4 })).toBe(0.25);
+    expect(progressFraction({ kind: "working", stage: "reading", done: 0, total: 0 })).toBe(0);
+    expect(progressFraction({ kind: "idle", count: 2 })).toBeNull();
   });
 });
 

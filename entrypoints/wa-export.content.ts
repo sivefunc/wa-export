@@ -24,10 +24,7 @@ export default defineContentScript({
     ui.onConfirm(controller.confirm);
     ui.onDismiss(controller.dismiss);
 
-    const tracker = new SelectionTracker(document, (s) => {
-      controller.selectionChanged(s);
-      ui.place();
-    });
+    const tracker = new SelectionTracker(document, controller.selectionChanged, ui.place);
     tracker.start();
     ui.setState({ kind: "hidden" });
 

@@ -43,7 +43,7 @@ export function createExportController(d: ControllerDeps) {
         const res = await d.collect({
           ids: [...selection.ids],
           orderingId: settings.order,
-          onProgress: (done, total) => set({ kind: "working", done, total }),
+          onProgress: (p) => set({ kind: "working", ...p }),
           confirmLargeExport: (bytes) =>
             new Promise<boolean>((resolve) => {
               pendingConfirm = resolve;
@@ -52,7 +52,10 @@ export function createExportController(d: ControllerDeps) {
         });
         if (!res.ok) return set({ kind: "error", message: res.error.message });
         try {
-          const { blob, filename } = await d.getWriter(settings.format).write(res.bundle);
+          set({ kind: "working", stage: "zipping", done: 0, total: 100 });
+          const { blob, filename } = await d
+            .getWriter(settings.format)
+            .write(res.bundle, (pct) => set({ kind: "working", stage: "zipping", done: pct, total: 100 }));
           d.save(blob, filename);
         } catch (err) {
           return set({ kind: "error", message: `Couldn't create the export file: ${errorText(err)}` });
@@ -68,7 +71,7 @@ export function createExportController(d: ControllerDeps) {
     confirm(ok: boolean) {
       const resolve = pendingConfirm;
       pendingConfirm = null;
-      if (ok) set({ kind: "working", done: 0, total: 1 });
+      if (ok) set({ kind: "working", stage: "downloading", done: 0, total: 1 });
       resolve?.(ok);
     },
 

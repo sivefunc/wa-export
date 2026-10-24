@@ -156,6 +156,15 @@ describe("SelectionTracker", () => {
     expect(t.snapshot().ids).toEqual(["B", "A"]);
   });
 
+  it("calls onTick after every pass, even without a change (for re-placing the UI)", () => {
+    nestedRow("A", false, 100);
+    let ticks = 0;
+    const t = new SelectionTracker(document, () => {}, () => ticks++);
+    t.reconcile();
+    t.reconcile();
+    expect(ticks).toBe(2);
+  });
+
   it("reports changes through onChange only when the snapshot changes", () => {
     const { box } = nestedRow("A", false, 100);
     const { t, changes } = tracker();

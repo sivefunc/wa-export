@@ -218,12 +218,21 @@ describe("collect", () => {
     expect(calls.find((c) => c.op === "GET_MEDIA")!.timeoutMs).toBe(60_000);
   });
 
-  it("onProgress reaches total (messages + media)", async () => {
-    const [a, b] = [msg(), image()];
-    const seen: [number, number][] = [];
-    const { rpc } = fakeRpc([a, b]);
-    await collect(options(rpc, [a.id, b.id], { onProgress: (done, total) => seen.push([done, total]) }));
-    expect(seen.at(-1)).toEqual([3, 3]);
+  it("reports progress in stages: reading messages, then downloading files", async () => {
+    const [a, b, c] = [msg(), image(), image()];
+    const seen: unknown[] = [];
+    const { rpc } = fakeRpc([a, b, c]);
+    await collect(options(rpc, [a.id, b.id, c.id], { onProgress: (p) => seen.push(p) }));
+    expect(seen[0]).toEqual({ stage: "reading", done: 0, total: 3 });
+    expect(seen).toContainEqual({ stage: "downloading", done: 0, total: 2 });
+    expect(seen.at(-1)).toEqual({ stage: "downloading", done: 2, total: 2 });
+  });
+
+  it("reports no download stage when nothing has media", async () => {
+    const seen: any[] = [];
+    const a = msg();
+    await collect(options(fakeRpc([a]).rpc, [a.id], { onProgress: (p) => seen.push(p) }));
+    expect(seen.every((p) => p.stage === "reading")).toBe(true);
   });
 
   it("stamps the bundle with the export time", async () => {

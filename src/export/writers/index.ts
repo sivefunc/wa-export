@@ -4,7 +4,7 @@ import { zipWriter } from "./zip";
 export interface Writer {
   id: string;
   label: string;
-  write(b: ExportBundle): Promise<{ blob: Blob; filename: string }>;
+  write(b: ExportBundle, onProgress?: (percent: number) => void): Promise<{ blob: Blob; filename: string }>;
 }
 
 export const writers: Record<string, Writer> = { zip: zipWriter };

@@ -13,10 +13,19 @@ function setup(result: CollectResult | (() => Promise<CollectResult>), write?: (
     loadSettings: async () => ({ format: "zip", order: "date" }),
     collect: async (o) => {
       if (typeof result === "function") return result();
-      o.onProgress(1, 2);
+      o.onProgress({ stage: "downloading", done: 1, total: 2 });
       return result;
     },
-    getWriter: () => ({ id: "zip", label: "ZIP", write: write ?? (async () => ({ blob: new Blob(["z"]), filename: "chat.zip" })) }),
+    getWriter: () => ({
+      id: "zip",
+      label: "ZIP",
+      write:
+        write ??
+        (async (_b, onProgress) => {
+          onProgress?.(50);
+          return { blob: new Blob(["z"]), filename: "chat.zip" };
+        }),
+    }),
     save: (_blob, name) => saved.push(name),
   });
   return { c, states, saved, last: () => states.at(-1)!, answer: (ok: boolean) => confirmAnswer?.(ok), setConfirm: (fn: any) => (confirmAnswer = fn) };
@@ -40,7 +49,8 @@ describe("export controller", () => {
     const { c, states, saved, last } = setup(okResult());
     c.selectionChanged({ active: true, ids: ["a", "b"] });
     await c.exportNow();
-    expect(states).toContainEqual({ kind: "working", done: 1, total: 2 });
+    expect(states).toContainEqual({ kind: "working", stage: "downloading", done: 1, total: 2 });
+    expect(states).toContainEqual({ kind: "working", stage: "zipping", done: 50, total: 100 });
     expect(saved).toEqual(["chat.zip"]);
     expect(last()).toEqual({ kind: "done", messages: 2, problems: [] });
   });

@@ -95,12 +95,15 @@ describe("mountExportUi", () => {
     expect(onExport).toHaveBeenCalledOnce();
   });
 
-  it("working state disables the button", () => {
+  it("working state disables the button and shows a progress bar", () => {
     const ui = mountExportUi(document);
-    ui.setState({ kind: "working", done: 1, total: 3 });
+    ui.setState({ kind: "working", stage: "downloading", done: 1, total: 4 });
     const btn = shadowOf().querySelector<HTMLButtonElement>("button.export")!;
     expect(btn.disabled).toBe(true);
-    expect(btn.textContent).toBe("Exporting 1/3…");
+    expect(btn.textContent).toBe("Downloading files 1/4…");
+    const bar = shadowOf().querySelector<HTMLElement>("[role=progressbar]")!;
+    expect(bar.getAttribute("aria-valuenow")).toBe("25");
+    expect(bar.style.width).toBe("25%");
   });
 
   it("confirm buttons fire onConfirm", () => {

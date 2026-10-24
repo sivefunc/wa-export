@@ -60,6 +60,8 @@ export class SelectionTracker {
   constructor(
     private doc: Document,
     private onChange: (s: SelectionSnapshot) => void,
+    /** Called after every pass, so the UI can follow WhatsApp re-rendering its toolbar. */
+    private onTick: () => void = () => {},
   ) {
     this.last = JSON.stringify(this.snapshot());
   }
@@ -106,6 +108,7 @@ export class SelectionTracker {
       }
     }
     this.emitIfChanged();
+    this.onTick();
   }
 
   private schedule(): void {

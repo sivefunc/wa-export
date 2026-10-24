@@ -18,12 +18,18 @@ export interface FatalError {
   message: string;
 }
 
+export interface CollectProgress {
+  stage: "reading" | "downloading";
+  done: number;
+  total: number;
+}
+
 export interface CollectOptions {
   ids: string[];
   rpc: PageRpc;
   orderingId: string;
   confirmLargeExport(totalBytes: number): Promise<boolean>;
-  onProgress(done: number, total: number): void; // total = messages + media items
+  onProgress(p: CollectProgress): void;
   concurrency?: number; // default 3
   now?: () => Date;
 }
@@ -56,6 +62,7 @@ async function eachLimited<T>(items: T[], limit: number, fn: (item: T) => Promis
 export async function collect(o: CollectOptions): Promise<CollectResult> {
   if (!o.ids.length) return fatal("nothing_selected", "Select at least one message first.");
 
+  o.onProgress({ stage: "reading", done: 0, total: o.ids.length });
   const health = await o.rpc.call("HEALTH", {}, MESSAGE_TIMEOUT_MS).catch(() => null);
   if (!health?.ready) return fatal("not_ready", "Can't read WhatsApp's messages. The extension needs an update.");
 
@@ -91,9 +98,8 @@ export async function collect(o: CollectOptions): Promise<CollectResult> {
 
   const paths = assignMediaPaths(records);
   const withMedia = records.filter((r) => paths.has(r.id));
-  const total = records.length + withMedia.length;
-  let done = records.length;
-  o.onProgress(done, total);
+  let done = 0;
+  if (withMedia.length) o.onProgress({ stage: "downloading", done, total: withMedia.length });
 
   const media = new Map<string, Blob>();
   await eachLimited(withMedia, o.concurrency ?? 3, async (r) => {
@@ -106,7 +112,7 @@ export async function collect(o: CollectOptions): Promise<CollectResult> {
     } catch (err) {
       r.problems.push(mediaProblem(r.id, err));
     }
-    o.onProgress(++done, total);
+    o.onProgress({ stage: "downloading", done: ++done, total: withMedia.length });
   });
 
   // Keep the media map in message order regardless of download completion order.

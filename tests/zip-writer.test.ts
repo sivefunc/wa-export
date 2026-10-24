@@ -62,6 +62,13 @@ describe("zip writer", () => {
     expect(blob.type).toBe("application/zip");
   });
 
+  it("reports ZIP progress up to 100%", async () => {
+    const seen: number[] = [];
+    await getWriter("zip").write(bundle(), (pct) => seen.push(pct));
+    expect(seen.at(-1)).toBe(100);
+    expect(seen).toEqual([...seen].sort((a, b) => a - b));
+  });
+
   it("unknown writer id falls back to zip", () => {
     expect(getWriter("pdf-someday")).toBe(writers.zip);
   });
