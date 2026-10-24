@@ -1,5 +1,5 @@
 // Headless Firefox check of the content-script paths unit tests can't cover:
-// the real ZIP writer fed page-world bytes (once hung at 33%), and <a download> saving.
+// the real ZIP and HTML writers fed page-world bytes (the ZIP once hung at 33%), and <a download> saving.
 // Usage: pnpm test:firefox   Env: FIREFOX_BINARY (optional; Selenium Manager finds Firefox and geckodriver).
 import { cpSync, existsSync, mkdtempSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
@@ -51,8 +51,9 @@ try {
   const version = (await driver.getCapabilities()).get("browserVersion");
   console.log(`Firefox ${version}`);
   console.log(`ZIP writer with page bytes: ${result.zip?.ok ? "ok" : "FAIL"} ${JSON.stringify(result.zip ?? result.error)}`);
+  console.log(`HTML writer with page bytes: ${result.html?.ok ? "ok" : "FAIL"} ${JSON.stringify(result.html ?? result.error)}`);
   console.log(`<a download> from content script: ${saved ? "ok" : "FAIL"}`);
-  failed = !result.zip?.ok || !saved;
+  failed = !result.zip?.ok || !result.html?.ok || !saved;
 } finally {
   await driver.quit();
 }

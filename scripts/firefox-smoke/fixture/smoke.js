@@ -29,6 +29,16 @@
     ]);
     out.zip = written ? { ok: written.blob.size > 3e6, progress: last } : { ok: false, stuckAt: last };
 
+    // The HTML writer reads the same page bytes to base64-encode them.
+    let lastHtml = -1;
+    const html = await Promise.race([
+      globalThis.__waExportGetWriter("html").write(bundle, (pct) => (lastHtml = pct)),
+      new Promise((resolve) => setTimeout(() => resolve(null), 15000)),
+    ]);
+    out.html = html
+      ? { ok: html.filename.endsWith(".html") && html.blob.size > 4e6 && (await html.blob.text()).includes('data-for="m1"'), progress: lastHtml }
+      : { ok: false, stuckAt: lastHtml };
+
     // Same as src/ui/save.ts: an <a download> click from the content script.
     const url = URL.createObjectURL(new Blob(["smoke"], { type: "application/zip" }));
     const a = document.createElement("a");
