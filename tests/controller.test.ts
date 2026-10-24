@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { CollectResult } from "../src/export/collect";
+import { zipWriter } from "../src/export/writers/zip";
 import { createExportController } from "../src/ui/controller";
 import type { UiState } from "../src/ui/state";
 import { record } from "./fixtures/messages";
@@ -7,11 +8,13 @@ import { record } from "./fixtures/messages";
 function setup(result: CollectResult | (() => Promise<CollectResult>), write?: () => Promise<{ blob: Blob; filename: string }>) {
   const states: UiState[] = [];
   const saved: string[] = [];
+  const collected: any[] = [];
   let confirmAnswer: ((ok: boolean) => void) | null = null;
   const c = createExportController({
     setState: (s) => states.push(s),
     loadSettings: async () => ({ format: "zip", order: "date" }),
     collect: async (o) => {
+      collected.push(o);
       if (typeof result === "function") return result();
       o.onProgress({ stage: "downloading", done: 1, total: 2 });
       return result;
@@ -19,6 +22,8 @@ function setup(result: CollectResult | (() => Promise<CollectResult>), write?: (
     getWriter: () => ({
       id: "zip",
       label: "ZIP",
+      fileType: "ZIP",
+      limits: { warnBytes: 1, maxBytes: 2, hint: "h" },
       write:
         write ??
         (async (_b, onProgress) => {
@@ -28,7 +33,7 @@ function setup(result: CollectResult | (() => Promise<CollectResult>), write?: (
     }),
     save: (_blob, name) => saved.push(name),
   });
-  return { c, states, saved, last: () => states.at(-1)!, answer: (ok: boolean) => confirmAnswer?.(ok), setConfirm: (fn: any) => (confirmAnswer = fn) };
+  return { c, states, saved, collected, last: () => states.at(-1)!, answer: (ok: boolean) => confirmAnswer?.(ok), setConfirm: (fn: any) => (confirmAnswer = fn) };
 }
 
 const okResult = (): CollectResult => ({
@@ -50,9 +55,16 @@ describe("export controller", () => {
     c.selectionChanged({ active: true, ids: ["a", "b"] });
     await c.exportNow();
     expect(states).toContainEqual({ kind: "working", stage: "downloading", done: 1, total: 2 });
-    expect(states).toContainEqual({ kind: "working", stage: "zipping", done: 50, total: 100 });
+    expect(states).toContainEqual({ kind: "working", stage: "writing", fileType: "ZIP", done: 50, total: 100 });
     expect(saved).toEqual(["chat.zip"]);
     expect(last()).toEqual({ kind: "done", messages: 2, problems: [] });
+  });
+
+  it("passes the chosen writer's limits to collect", async () => {
+    const { c, collected } = setup(okResult());
+    c.selectionChanged({ active: true, ids: ["a"] });
+    await c.exportNow();
+    expect(collected[0].limits).toEqual({ warnBytes: 1, maxBytes: 2, hint: "h" });
   });
 
   it("a fatal collect result shows its message and saves nothing", async () => {
@@ -122,7 +134,7 @@ describe("export controller", () => {
         answer = await o.confirmLargeExport(600 * 1024 * 1024);
         return new Promise((r) => (resolveCollect = r));
       },
-      getWriter: () => ({ id: "zip", label: "ZIP", write: async () => ({ blob: new Blob([]), filename: "x.zip" }) }),
+      getWriter: () => ({ ...zipWriter, write: async () => ({ blob: new Blob([]), filename: "x.zip" }) }),
       save: () => {},
     });
     c.selectionChanged({ active: true, ids: ["a"] });

@@ -33,6 +33,8 @@ describe("zip writer", () => {
   it("is the default and is registered", () => {
     expect(DEFAULT_WRITER).toBe("zip");
     expect(writers.zip.label).toBeTruthy();
+    expect(writers.zip.fileType).toBe("ZIP");
+    expect(writers.zip.limits).toEqual({ warnBytes: 500 * 1024 * 1024, maxBytes: 1.5 * 1024 ** 3, hint: "Select fewer large files." });
   });
 
   it("zip contains chat.md, messages.json and every media path", async () => {

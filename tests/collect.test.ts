@@ -211,6 +211,22 @@ describe("collect", () => {
     });
   });
 
+  it("a writer's own limits replace the defaults", async () => {
+    const limits = { warnBytes: 200 * 1024 * 1024, maxBytes: 500 * 1024 * 1024, hint: "Select fewer large files, or export as ZIP." };
+    const mid = image({ media: media("video", { mime: "video/mp4", size: 300 * 1024 * 1024 }) });
+    const asked: number[] = [];
+    const { rpc } = fakeRpc([mid]);
+    await collect(options(rpc, [mid.id], { limits, confirmLargeExport: async (bytes) => (asked.push(bytes), true) }));
+    expect(asked).toEqual([300 * 1024 * 1024]);
+
+    const big = image({ media: media("video", { mime: "video/mp4", size: 600 * 1024 * 1024 }) });
+    const res = await collect(options(fakeRpc([big]).rpc, [big.id], { limits }));
+    expect(res).toEqual({
+      ok: false,
+      error: { code: "too_large", message: "This export is 600 MB, over the 500 MB limit. Select fewer large files, or export as ZIP." },
+    });
+  });
+
   it("uses the open chat from GET_CHAT; a failure leaves the name null", async () => {
     const a = msg();
     const ok = await collect(options(fakeRpc([a]).rpc, [a.id]));

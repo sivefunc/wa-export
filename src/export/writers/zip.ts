@@ -1,4 +1,5 @@
 import JSZip from "jszip";
+import { MAX_BYTES, WARN_BYTES } from "../collect";
 import { exportFilename } from "../naming";
 import { renderChatMd } from "../render-chat-md";
 import { renderMessagesJson } from "../render-json";
@@ -7,6 +8,8 @@ import type { Writer } from "./index";
 export const zipWriter: Writer = {
   id: "zip",
   label: "ZIP (chat.md + messages.json + media/)",
+  fileType: "ZIP",
+  limits: { warnBytes: WARN_BYTES, maxBytes: MAX_BYTES, hint: "Select fewer large files." },
   async write(b, onProgress) {
     const zip = new JSZip();
     zip.file("chat.md", renderChatMd(b));

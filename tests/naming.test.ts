@@ -82,4 +82,8 @@ describe("exportFilename", () => {
   it("handles a phone-number chat name", () => {
     expect(exportFilename("+1 555-0100", new Date(2026, 9, 24, 9, 0))).toBe("1 555-0100-2026-10-24-0900.zip");
   });
+
+  it("takes the extension of the format", () => {
+    expect(exportFilename("Team", new Date(2026, 9, 24, 9, 0), "html")).toBe("Team-2026-10-24-0900.html");
+  });
 });

@@ -1,9 +1,12 @@
 import type { ExportBundle } from "../../types";
+import type { SizeLimits } from "../collect";
 import { zipWriter } from "./zip";
 
 export interface Writer {
   id: string;
   label: string;
+  fileType: string; // short name for progress, e.g. "ZIP"
+  limits: SizeLimits;
   write(b: ExportBundle, onProgress?: (percent: number) => void): Promise<{ blob: Blob; filename: string }>;
 }
 

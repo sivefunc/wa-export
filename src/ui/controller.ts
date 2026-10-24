@@ -44,9 +44,11 @@ export function createExportController(d: ControllerDeps) {
       exportedKey = selection.ids.join();
       try {
         const settings = await d.loadSettings();
+        const writer = d.getWriter(settings.format);
         const res = await d.collect({
           ids: [...selection.ids],
           orderingId: settings.order,
+          limits: writer.limits,
           onProgress: (p) => set({ kind: "working", ...p }),
           confirmLargeExport: (bytes) =>
             new Promise<boolean>((resolve) => {
@@ -56,10 +58,9 @@ export function createExportController(d: ControllerDeps) {
         });
         if (!res.ok) return set({ kind: "error", message: res.error.message });
         try {
-          set({ kind: "working", stage: "zipping", done: 0, total: 100 });
-          const { blob, filename } = await d
-            .getWriter(settings.format)
-            .write(res.bundle, (pct) => set({ kind: "working", stage: "zipping", done: pct, total: 100 }));
+          const writing = (done: number) => set({ kind: "working", stage: "writing", fileType: writer.fileType, done, total: 100 });
+          writing(0);
+          const { blob, filename } = await writer.write(res.bundle, writing);
           d.save(blob, filename);
         } catch (err) {
           return set({ kind: "error", message: `Couldn't create the export file: ${errorText(err)}` });
