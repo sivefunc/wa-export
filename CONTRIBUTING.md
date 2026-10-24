@@ -60,7 +60,7 @@ These are hard requirements. A PR that breaks one won't be merged.
 - **Read-only.** Never send, forward, delete, react to, or mark messages read. Never scroll or load history on the user's behalf.
 - **No re-upload requests.** Expired media must stay expired. The guard in `src/page/handlers.ts` blocks WhatsApp's automatic request; don't bypass it.
 - **View-once stays view-once.**
-- **No network, no remote code.** Everything is bundled. Never fetch scripts, never add analytics. The only permission is `storage`.
+- **No network, no remote code.** Everything is bundled. Never fetch scripts, never add analytics. The only permission is `storage`. The only downloads are WhatsApp's own: selected media through WA-JS, and for the HTML format the small profile pictures from `*.whatsapp.net` (`GET_AVATARS` refuses any other host).
 - **Never silent.** Every per-message or per-file failure has to reach the UI summary, `chat.md` and `messages.json`.
 
 ## Privacy in the repo

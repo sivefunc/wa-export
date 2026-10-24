@@ -51,6 +51,16 @@ the browser's print dialog.
 - **Pure renderer.** `renderChatHtml(bundle, opts)` returns the page as an array of string parts, with
   `{ media: path }` placeholders where encoded bytes go; the writer fills them. Tests parse the parts with jsdom.
 
+## Profile pictures (added 2026-10-24)
+
+- HTML only (the ZIP is unchanged): the chat's picture in the header; in groups, each sender's picture beside the
+  first bubble of their run, as WhatsApp Web does. No picture → the initial on the sender's color.
+- Writers opt in with `wantsAvatars`; collect() then calls `GET_AVATARS` with the chat jid and the other senders'
+  jids. The page side asks WA-JS (`contact.getProfilePictureUrl(jid, false)`, the small ~5 KB picture), fetches it
+  only if the URL is `https://*.whatsapp.net`, and only keeps `image/*` up to 1 MB.
+- Pictures are decoration: a missing or failed one is not an export problem.
+- Each picture is embedded once and decoded once, however many bubbles show it.
+
 ## Files
 
 - `src/export/wa-html.ts` — WhatsApp formatting → safe HTML.

@@ -28,6 +28,7 @@ WhatsApp Web 2.3000.1051605128 · WA-JS 4.7.2 · tested 2026-10-24 on the owner'
 | Edited message | ✅ | | final text exported (no "edited" mark yet) |
 | HTML format: page opens, media shows and plays | | | pending live run; fictional sample checked in Chromium (light, dark, print to PDF) |
 | HTML format: Save as PDF | | | pending live run |
+| Profile pictures (GET_AVATARS over the real bridge) | ✅ | | 8 of 9 jids (`@c.us`, `@lid`, `@g.us`) → JPEG 2–6 KB from `*.whatsapp.net`; an unknown number → left out |
 
 ## Firefox notes
 
