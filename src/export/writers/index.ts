@@ -1,5 +1,6 @@
 import type { ExportBundle } from "../../types";
 import type { SizeLimits } from "../collect";
+import { htmlWriter } from "./html";
 import { zipWriter } from "./zip";
 
 export interface Writer {
@@ -10,7 +11,7 @@ export interface Writer {
   write(b: ExportBundle, onProgress?: (percent: number) => void): Promise<{ blob: Blob; filename: string }>;
 }
 
-export const writers: Record<string, Writer> = { zip: zipWriter };
+export const writers: Record<string, Writer> = { zip: zipWriter, html: htmlWriter };
 
 export const DEFAULT_WRITER = "zip";
 

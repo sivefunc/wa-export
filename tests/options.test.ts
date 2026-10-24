@@ -15,7 +15,7 @@ const select = (name: string) => root().querySelector<HTMLSelectElement>(`select
 describe("options page", () => {
   it("renders a select per setting populated from the registries", async () => {
     await renderOptions(root());
-    expect([...select("format").options].map((o) => o.value)).toEqual(["zip"]);
+    expect([...select("format").options].map((o) => o.value)).toEqual(["zip", "html"]);
     expect([...select("order").options].map((o) => o.value)).toEqual(["date"]);
     expect(root().textContent).toContain("Export format");
     expect(root().textContent).toContain("Message order");
