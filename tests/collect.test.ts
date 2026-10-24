@@ -280,3 +280,36 @@ describe("collect", () => {
     expect(res.ok && res.bundle.exportedAt.toISOString()).toBe("2026-10-24T12:00:00.000Z");
   });
 });
+
+describe("collect avatars", () => {
+  const ana = { jid: "123@lid", name: "Ana" };
+  const luis = { jid: "456@lid", name: "Luis" };
+  const pic = (jid: string) => ({ jid, mime: "image/jpeg", buffer: new TextEncoder().encode(`pic ${jid}`).buffer as ArrayBuffer });
+
+  it("asks for the chat's and the other senders' pictures only when the writer wants them", async () => {
+    const msgs = [msg({ sender: ana }), msg({ sender: ana }), msg({ sender: luis }), msg({ fromMe: true, sender: { jid: "999@c.us", name: null } })];
+    const { rpc, calls } = fakeRpc(msgs, { GET_AVATARS: async ({ jids }) => ({ avatars: jids.filter((j) => j !== "456@lid").map(pic) }) });
+    const res = await collect(options(rpc, msgs.map((m) => m.id), { avatars: true }));
+    const req = calls.find((c) => c.op === "GET_AVATARS")!.req as { jids: string[] };
+    expect(req.jids).toEqual(["1@g.us", "123@lid", "456@lid"]);
+    expect(res.ok && [...res.bundle.avatars!.keys()]).toEqual(["1@g.us", "123@lid"]);
+    expect(res.ok && (await res.bundle.avatars!.get("123@lid")!.text())).toBe("pic 123@lid");
+    expect(res.ok && res.bundle.avatars!.get("123@lid")!.type).toBe("image/jpeg");
+
+    const { rpc: rpc2, calls: calls2 } = fakeRpc(msgs);
+    const res2 = await collect(options(rpc2, msgs.map((m) => m.id)));
+    expect(calls2.some((c) => c.op === "GET_AVATARS")).toBe(false);
+    expect(res2.ok && res2.bundle.avatars).toBeUndefined();
+  });
+
+  it("a failed picture lookup still exports, without pictures", async () => {
+    const m = msg({ sender: ana });
+    const { rpc } = fakeRpc([m], {
+      GET_AVATARS: async () => {
+        throw new Error("boom");
+      },
+    });
+    const res = await collect(options(rpc, [m.id], { avatars: true }));
+    expect(res.ok && res.bundle.avatars!.size).toBe(0);
+  });
+});

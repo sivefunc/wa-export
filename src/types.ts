@@ -69,5 +69,6 @@ export interface ExportBundle {
   exportedAt: Date;
   records: ExportRecord[]; // already ordered
   media: Map<string, Blob>; // path → bytes
+  avatars?: Map<string, Blob>; // jid → profile picture, only for writers that ask for them
   problems: ExportProblem[]; // every problem, including message_not_found for ids with no record
 }

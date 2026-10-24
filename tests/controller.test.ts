@@ -65,6 +65,7 @@ describe("export controller", () => {
     c.selectionChanged({ active: true, ids: ["a"] });
     await c.exportNow();
     expect(collected[0].limits).toEqual({ warnBytes: 1, maxBytes: 2, hint: "h" });
+    expect(collected[0].avatars).toBe(false);
   });
 
   it("a fatal collect result shows its message and saves nothing", async () => {

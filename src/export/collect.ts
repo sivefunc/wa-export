@@ -4,6 +4,7 @@ import type { ChatInfo, ExportBundle, ExportProblem, ExportRecord, ProblemCode, 
 import { assignMediaPaths } from "./naming";
 import { applyOrdering } from "./orderings";
 
+const AVATARS_TIMEOUT_MS = 30_000;
 export const WARN_BYTES = 500 * 1024 * 1024;
 export const MAX_BYTES = 1.5 * 1024 ** 3;
 /** Media size above which the user is asked to confirm, and above which the export is refused. */
@@ -49,6 +50,7 @@ export interface CollectOptions {
   confirmLargeExport(totalBytes: number): Promise<boolean>;
   onProgress(p: CollectProgress): void;
   limits?: SizeLimits; // default WARN_BYTES / MAX_BYTES
+  avatars?: boolean; // also fetch profile pictures (chat + other senders)
   concurrency?: number; // default 3
   now?: () => Date;
 }
@@ -76,6 +78,24 @@ async function eachLimited<T>(items: T[], limit: number, fn: (item: T) => Promis
     while (next < items.length) await fn(items[next++]);
   };
   await Promise.all(Array.from({ length: Math.min(limit, items.length) }, worker));
+}
+
+/** Pictures are decoration: a failure leaves the initials WhatsApp would show, not a problem. */
+async function collectAvatars(rpc: PageRpc, chat: ChatInfo, records: ExportRecord[]): Promise<Map<string, Blob>> {
+  const jids = [...new Set([chat.jid, ...records.filter((r) => !r.fromMe).map((r) => r.sender.jid)])].filter((j): j is string => !!j);
+  const avatars = new Map<string, Blob>();
+  if (!jids.length) return avatars;
+  try {
+    const res = await rpc.call("GET_AVATARS", { jids }, AVATARS_TIMEOUT_MS);
+    const byJid = new Map(res.avatars.map((a) => [a.jid, a]));
+    for (const jid of jids) {
+      const a = byJid.get(jid);
+      if (a) avatars.set(jid, new Blob([a.buffer], { type: a.mime }));
+    }
+  } catch {
+    // keep the empty map
+  }
+  return avatars;
 }
 
 export async function collect(o: CollectOptions): Promise<CollectResult> {
@@ -145,8 +165,7 @@ export async function collect(o: CollectOptions): Promise<CollectResult> {
   const orderedMedia = new Map([...paths.values()].filter((p) => media.has(p)).map((p) => [p, media.get(p)!]));
   problems.push(...records.flatMap((r) => r.problems));
 
-  return {
-    ok: true,
-    bundle: { chat, exportedAt: (o.now ?? (() => new Date()))(), records, media: orderedMedia, problems },
-  };
+  const bundle: ExportBundle = { chat, exportedAt: (o.now ?? (() => new Date()))(), records, media: orderedMedia, problems };
+  if (o.avatars) bundle.avatars = await collectAvatars(o.rpc, chat, records);
+  return { ok: true, bundle };
 }
