@@ -122,6 +122,17 @@ describe("renderChatMd", () => {
     expect(renderChatMd(bundle([r]))).toContain("⚠️ Image missing: could not be downloaded from WhatsApp");
   });
 
+  it("a missing file names the file, in the message and in the problems list", () => {
+    const r = record(
+      { timestamp: T, sender: { jid: "1", name: "Ana" }, text: "spec.pdf", media: media("document", { filename: "spec.pdf" }) },
+      { problems: [problem(null, "media_expired")] },
+    );
+    r.problems[0].messageId = r.id;
+    const md = renderChatMd(bundle([r]));
+    expect(md).toContain("⚠️ File missing (spec.pdf): expired on WhatsApp, not re-requested");
+    expect(md).toContain("- Ana at 2026-10-24 06:34: File spec.pdf expired on WhatsApp, not re-requested");
+  });
+
   it("quoted reply renders blockquote with name and text", () => {
     const r = record({ quoted: { id: "Q", senderName: "Bob", timestamp: 1792845000, text: "Does it\nreproduce?" } });
     expect(renderChatMd(bundle([r]))).toContain(

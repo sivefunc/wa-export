@@ -62,7 +62,8 @@ function renderMessage(r: ExportRecord): string {
   if (text) parts.push(whatsappToMarkdown(text));
   const line = mediaLine(r);
   if (line) parts.push(line);
-  for (const p of r.problems) parts.push(`⚠️ ${mediaKindLabel(r.media?.kind)} missing: ${problemText(p)}`);
+  const file = r.media?.filename ? ` (${r.media.filename})` : "";
+  for (const p of r.problems) parts.push(`⚠️ ${mediaKindLabel(r.media?.kind)} missing${file}: ${problemText(p)}`);
   if (r.type === "revoked") parts.push("_(deleted message)_");
   else if (!text && !r.media && !r.problems.length) parts.push(`_(unsupported message type: ${r.type})_`);
   return parts.join("\n\n");
@@ -74,7 +75,8 @@ export function problemLines(b: ExportBundle): string[] {
   return b.problems.map((p) => {
     const r = p.messageId ? byId.get(p.messageId) : undefined;
     if (!r) return `Message ${p.messageId ?? "unknown"}: ${problemText(p)}`;
-    return `${senderOf(r)} at ${formatLocal(r.timestamp)}: ${mediaKindLabel(r.media?.kind)} ${problemText(p)}`;
+    const file = r.media?.filename ? ` ${r.media.filename}` : "";
+    return `${senderOf(r)} at ${formatLocal(r.timestamp)}: ${mediaKindLabel(r.media?.kind)}${file} ${problemText(p)}`;
   });
 }
 
