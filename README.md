@@ -1,5 +1,7 @@
 # WA Export for WhatsApp Web
 
+[![CI](https://github.com/sivefunc/wa-export/actions/workflows/ci.yml/badge.svg)](https://github.com/sivefunc/wa-export/actions/workflows/ci.yml)
+
 Select messages in WhatsApp Web the way you would to forward them, click **Export**, and get a ZIP with the conversation and every file. Made for dragging into Claude Code.
 
 Chrome/Chromium 111+ and Firefox 128+. Everything runs locally; see [PRIVACY.md](PRIVACY.md).
@@ -45,13 +47,10 @@ Albums export every photo. A reply to a file keeps the reply text plus a mention
 
 ```sh
 pnpm install
-pnpm build && pnpm zip && pnpm test   # manifest and package tests read the build output
-pnpm typecheck
-pnpm dev            # Chromium with hot reload
-pnpm dev:firefox
+pnpm build && pnpm zip && pnpm test
 ```
 
-Live testing against a real WhatsApp session: `node scripts/live/launch.mjs .output/chrome-mv3-dev` opens Chromium with the extension and a persistent profile in `.live/` (gitignored, never uploaded). `scripts/live/probe.mjs` runs snippets in that page over CDP.
+See [CONTRIBUTING.md](CONTRIBUTING.md) for the architecture, live testing against WhatsApp Web, the Firefox checks, and the rules every change must keep.
 
 ### Updating WA-JS
 
@@ -64,3 +63,7 @@ WA-JS runs inside your WhatsApp session with full access, so treat upgrades as a
 ### Store submission
 
 The manifest name is a placeholder: WhatsApp is Meta's trademark, so the public name must not start with "WhatsApp" and must not use its logo. Pick the final name before submitting. Firefox submissions need the sources ZIP that `pnpm zip` creates.
+
+## License
+
+[MIT](LICENSE). Bundled third-party code keeps its own licenses; see [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).
