@@ -10,7 +10,7 @@ Chrome/Chromium 111+ and Firefox 128+. Everything runs locally; see [PRIVACY.md]
 
 1. Open a chat in WhatsApp Web → ⋮ → **Select messages**.
 2. Tick the messages you want. Scrolling is fine; ticks out of view are kept.
-3. Click **Export N**, next to Forward in the selection toolbar. The ⚙ button beside it picks the format (ZIP or HTML) and the message order; it's the same setting as the extension's options page.
+3. Click **Export N**, next to Forward in the selection toolbar. The ⚙ beside it opens a menu, styled like WhatsApp's own, to pick the format (ZIP or HTML) and the message order; it's the same setting as the extension's options page.
 4. Drag the downloaded ZIP into Claude Code.
 
 ## What's in the ZIP

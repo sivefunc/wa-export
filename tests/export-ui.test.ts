@@ -138,7 +138,8 @@ describe("mountExportUi", () => {
   });
 });
 
-describe("settings button", () => {
+describe("settings menu", () => {
+  afterEach(() => vi.useRealTimers());
   function setup(initial = { format: "zip", order: "date" }) {
     const saved: { format: string; order: string }[] = [];
     let current = { ...initial };
@@ -150,20 +151,23 @@ describe("settings button", () => {
     return { ui, saved };
   }
   const gear = () => shadowOf().querySelector<HTMLButtonElement>("button.settings")!;
-  const panel = () => shadowOf().querySelector<HTMLElement>(".panel.settings-panel");
-  const select = (name: string) => shadowOf().querySelector<HTMLSelectElement>(`select[name="${name}"]`)!;
+  const menu = () => shadowOf().querySelector<HTMLElement>('.menu[role="menu"]');
+  const sub = () => shadowOf().querySelector<HTMLElement>('.submenu[role="menu"]');
+  const items = () => [...menu()!.querySelectorAll<HTMLButtonElement>('[role="menuitem"]')];
+  const active = () => shadowOf().activeElement;
   const flush = () => new Promise((r) => setTimeout(r, 0));
+  const key = (k: string) => shadowOf().activeElement!.dispatchEvent(new KeyboardEvent("keydown", { key: k, bubbles: true, composed: true }));
   const open = async () => {
     gear().click();
     await flush();
   };
 
-  it("sits right after Export while idle, labelled for screen readers", () => {
+  it("the gear sits right after Export while idle and announces a menu", () => {
     setup();
-    const btn = gear();
-    expect(btn.getAttribute("aria-label")).toBe("Export settings");
-    expect(btn.getAttribute("aria-expanded")).toBe("false");
-    expect(btn.previousElementSibling!.classList.contains("export")).toBe(true);
+    expect(gear().getAttribute("aria-label")).toBe("Export settings");
+    expect(gear().getAttribute("aria-haspopup")).toBe("menu");
+    expect(gear().getAttribute("aria-expanded")).toBe("false");
+    expect(gear().previousElementSibling!.classList.contains("export")).toBe(true);
   });
 
   it("is not shown while exporting or showing a result", () => {
@@ -174,69 +178,118 @@ describe("settings button", () => {
     expect(shadowOf().querySelector("button.settings")).toBeNull();
   });
 
-  it("opens a panel with the saved format and order", async () => {
+  it("opens a menu with Format and Order and their current values, focusing the first item", async () => {
     setup({ format: "html", order: "date" });
     await open();
-    expect(panel()).not.toBeNull();
     expect(gear().getAttribute("aria-expanded")).toBe("true");
-    expect([...select("format").options].map((o) => o.value)).toEqual(["zip", "html"]);
-    expect(select("format").value).toBe("html");
-    expect(select("order").value).toBe("date");
+    expect(items().map((i) => [i.querySelector(".text")!.textContent, i.querySelector(".value")!.textContent])).toEqual([
+      ["Format", "HTML"],
+      ["Order", "Oldest first"],
+    ]);
+    expect(items().every((i) => i.getAttribute("aria-haspopup") === "menu")).toBe(true);
+    expect(active()).toBe(items()[0]);
   });
 
-  it("saves a change right away and says so", async () => {
+  it("an item opens a submenu with every option and the current one checked", async () => {
+    setup({ format: "html", order: "date" });
+    await open();
+    items()[0].click();
+    expect(items()[0].getAttribute("aria-expanded")).toBe("true");
+    const options = [...sub()!.querySelectorAll<HTMLElement>('[role="menuitemradio"]')];
+    expect(options.map((o) => o.querySelector(".text")!.textContent)).toEqual(["ZIP", "HTML"]);
+    expect(options.map((o) => o.getAttribute("aria-checked"))).toEqual(["false", "true"]);
+    expect(options[1].querySelector(".hint")!.textContent).toBeTruthy();
+  });
+
+  it("hovering an item opens its submenu, like WhatsApp", async () => {
+    setup();
+    await open();
+    vi.useFakeTimers();
+    items()[1].dispatchEvent(new MouseEvent("mouseover", { bubbles: true, composed: true }));
+    expect(sub()).toBeNull();
+    vi.advanceTimersByTime(200);
+    expect(sub()!.getAttribute("aria-label")).toBe("Order");
+    expect(active()).toBe(items()[1]);
+    items()[0].dispatchEvent(new MouseEvent("mouseover", { bubbles: true, composed: true }));
+    vi.advanceTimersByTime(200);
+    expect(sub()!.getAttribute("aria-label")).toBe("Format");
+    vi.useRealTimers();
+  });
+
+  it("choosing an option saves it and closes the menu, like WhatsApp", async () => {
     const { saved } = setup();
     await open();
-    select("format").value = "html";
-    select("format").dispatchEvent(new Event("change", { bubbles: true }));
+    items()[0].click();
+    sub()!.querySelectorAll<HTMLElement>('[role="menuitemradio"]')[1].click();
     await flush();
     expect(saved).toEqual([{ format: "html", order: "date" }]);
-    expect(panel()!.querySelector("[role=status]")!.textContent).toBe("Saved");
+    expect(menu()).toBeNull();
+    expect(active()).toBe(gear());
   });
 
-  it("stays open with the new values when the selection count changes", async () => {
+  it("the arrow keys move through items and open and close submenus", async () => {
+    setup();
+    await open();
+    key("ArrowDown");
+    expect(active()).toBe(items()[1]);
+    key("ArrowDown");
+    expect(active()).toBe(items()[0]); // wraps
+    key("ArrowRight");
+    expect(sub()).not.toBeNull();
+    expect(active()!.getAttribute("role")).toBe("menuitemradio");
+    key("Escape");
+    expect(sub()).toBeNull();
+    expect(menu()).not.toBeNull();
+    expect(active()).toBe(items()[0]);
+    key("Escape");
+    expect(menu()).toBeNull();
+    expect(active()).toBe(gear());
+  });
+
+  it("stays open when the selection count changes, and ignores identical updates", async () => {
     const { ui } = setup();
     await open();
-    select("format").value = "html";
-    select("format").dispatchEvent(new Event("change", { bubbles: true }));
-    await flush();
+    const before = menu();
+    ui.setState({ kind: "idle", count: 2 });
+    expect(menu()).toBe(before);
     ui.setState({ kind: "idle", count: 3 });
-    expect(panel()).not.toBeNull();
-    expect(select("format").value).toBe("html");
+    expect(menu()).not.toBeNull();
   });
 
-  it("closes with the gear, Escape, a click outside, or Export", async () => {
+  it("closes with the gear, a click outside, or Export", async () => {
     const { ui } = setup();
     const onExport = vi.fn();
     ui.onExport(onExport);
     await open();
     gear().click();
-    expect(panel()).toBeNull();
-
-    await open();
-    document.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape" }));
-    expect(panel()).toBeNull();
+    expect(menu()).toBeNull();
 
     await open();
     document.body.dispatchEvent(new MouseEvent("pointerdown", { bubbles: true, composed: true }));
-    expect(panel()).toBeNull();
+    expect(menu()).toBeNull();
 
     await open();
     shadowOf().querySelector<HTMLButtonElement>("button.export")!.click();
-    expect(panel()).toBeNull();
+    expect(menu()).toBeNull();
     expect(onExport).toHaveBeenCalledOnce();
   });
 
-  it("a click inside the panel keeps it open", async () => {
+  it("a click inside the menu keeps it open", async () => {
     setup();
     await open();
-    select("order").dispatchEvent(new MouseEvent("pointerdown", { bubbles: true, composed: true }));
-    expect(panel()).not.toBeNull();
+    items()[1].dispatchEvent(new MouseEvent("pointerdown", { bubbles: true, composed: true }));
+    expect(menu()).not.toBeNull();
   });
 
   it("without settings access there is no gear", () => {
     const ui = mountExportUi(document);
     ui.setState({ kind: "idle", count: 1 });
     expect(shadowOf().querySelector("button.settings")).toBeNull();
+  });
+
+  it("takes its colors from WhatsApp's theme variables", () => {
+    setup();
+    const css = shadowOf().querySelector("style")!.textContent!;
+    for (const v of ["--WDS-surface-default", "--WDS-content-default", "--WDS-accent", "--WDS-surface-highlight-RGB"]) expect(css).toContain(`var(${v}`);
   });
 });
