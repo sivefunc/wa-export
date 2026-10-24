@@ -52,9 +52,14 @@ function renderMessage(r: ExportRecord): string {
   const parts = [`## ${senderOf(r)} — ${formatLocal(r.timestamp)}`];
   if (r.isForwarded) parts.push("_↪ Forwarded_");
   if (r.quoted) {
-    const who = r.quoted.senderName ?? "Unknown";
+    const who = r.quoted.fromMe ? "You" : (r.quoted.senderName ?? "Unknown");
     const when = r.quoted.timestamp != null ? ` — ${formatLocal(r.quoted.timestamp)}` : "";
-    parts.push(`> Replying to **${who}**${when}\n>\n${quote(whatsappToMarkdown(r.quoted.text))}`);
+    const body = r.quoted.text
+      ? whatsappToMarkdown(r.quoted.text)
+      : r.quoted.kind
+        ? `_(${mediaKindLabel(r.quoted.kind)})_`
+        : "_(no text)_";
+    parts.push(`> Replying to **${who}**${when}\n>\n${quote(body)}`);
   } else if (r.quotedUnavailable) {
     parts.push("> Replying to a message that isn't available");
   }

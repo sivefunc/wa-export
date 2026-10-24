@@ -37,6 +37,7 @@ function fakeWpp(
     },
     whatsapp: { MsgStore: { getModelsArray: () => store } },
     contact: { get: async (jid: string) => ({ pushname: `Push ${jid}` }) },
+    conn: { getMyUserLid: () => ({ _serialized: "self@lid" }), getMyUserId: () => ({ _serialized: "999@c.us" }) },
   };
 }
 
@@ -85,6 +86,12 @@ describe("handlers", () => {
     const res = await h.GET_MESSAGES({ ids: ["false_g_1"] });
     expect(res.messages[0].id).toBe("false_g_1");
     expect(res.messages[0].sender).toEqual({ jid: "456@c.us", name: "Push 456@c.us" });
+  });
+
+  it("GET_MESSAGES marks quotes of my own messages using my ids", async () => {
+    const reply = { ...raw.replyWithQuote, quotedParticipant: raw.wid("self@lid") };
+    const res = await createHandlers(() => fakeWpp({ true_1_R: reply })).GET_MESSAGES({ ids: ["true_1_R"] });
+    expect(res.messages[0].quoted?.fromMe).toBe(true);
   });
 
   it("GET_CHAT returns the active chat", async () => {

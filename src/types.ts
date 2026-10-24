@@ -10,9 +10,11 @@ export interface WaMediaInfo {
 
 export interface QuotedMessage {
   id: string | null;
+  fromMe: boolean;
   senderName: string | null;
   timestamp: number | null; // unix seconds
   text: string;
+  kind: MediaKind | null; // what was quoted, when it was media
 }
 
 export interface WaMessage {

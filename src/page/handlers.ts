@@ -13,6 +13,7 @@ export interface WppLike {
     getActiveChat(): any;
   };
   contact: { get(jid: string): Promise<any> | any };
+  conn?: { getMyUserLid?(): unknown; getMyUserId?(): unknown };
   whatsapp: { MsgStore: { getModelsArray(): any[] } };
 }
 
@@ -209,8 +210,22 @@ export function createHandlers(
       const names = new Map<string, string | null>();
       await Promise.all([...jids].map(async (jid) => names.set(jid, await contactName(wpp, jid))));
 
+      const myJids = new Set(
+        [wpp.conn?.getMyUserLid, wpp.conn?.getMyUserId]
+          .map((get) => {
+            try {
+              return idToString(get?.call(wpp.conn));
+            } catch {
+              return null;
+            }
+          })
+          .filter((j): j is string => !!j),
+      );
       // The DOM data-id is the join key for selection and media, so it wins over the model's own id.
-      const messages = messagesFound.map(({ id, raw }) => ({ ...normalizeMessage(raw, (jid) => names.get(jid) ?? null), id }));
+      const messages = messagesFound.map(({ id, raw }) => ({
+        ...normalizeMessage(raw, (jid) => names.get(jid) ?? null, myJids),
+        id,
+      }));
       return { messages, failures };
     },
 

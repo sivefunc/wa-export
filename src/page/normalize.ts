@@ -59,22 +59,29 @@ function mediaOf(raw: any): WaMediaInfo | null {
   };
 }
 
-function quotedOf(raw: any, resolveName: (jid: string) => string | null): QuotedMessage | null {
+function quotedOf(raw: any, resolveName: (jid: string) => string | null, myJids: Set<string>): QuotedMessage | null {
   const q = raw?.quotedMsg;
   if (!q) return null;
   const participant = idToString(raw.quotedParticipant);
   return {
     id: typeof raw.quotedStanzaID === "string" ? raw.quotedStanzaID : null,
+    // A quoted text keeps only {type, kind, body}, so "mine" may only show through the participant.
+    fromMe: q.id?.fromMe === true || (!!participant && myJids.has(participant)),
     senderName: participant ? resolveName(participant) : null,
     timestamp: toNumber(q.t),
     text: textOf(q),
+    kind: mediaKindOf(q.type ?? ""),
   };
 }
 
-export function normalizeMessage(raw: any, resolveName: (jid: string) => string | null): WaMessage {
+export function normalizeMessage(
+  raw: any,
+  resolveName: (jid: string) => string | null,
+  myJids: Set<string> = new Set(),
+): WaMessage {
   const fromMe = Boolean(raw?.id?.fromMe);
   const jid = senderJidOf(raw);
-  const quoted = quotedOf(raw, resolveName);
+  const quoted = quotedOf(raw, resolveName, myJids);
   return {
     id: idToString(raw?.id) ?? "",
     fromMe,

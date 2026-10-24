@@ -134,10 +134,25 @@ describe("renderChatMd", () => {
   });
 
   it("quoted reply renders blockquote with name and text", () => {
-    const r = record({ quoted: { id: "Q", senderName: "Bob", timestamp: 1792845000, text: "Does it\nreproduce?" } });
+    const r = record({ quoted: { id: "Q", fromMe: false, senderName: "Bob", timestamp: 1792845000, text: "Does it\nreproduce?", kind: null } });
     expect(renderChatMd(bundle([r]))).toContain(
       "> Replying to **Bob** — 2026-10-24 06:30\n>\n> Does it\n> reproduce?\n",
     );
+  });
+
+  it("a quote of my own message says You", () => {
+    const r = record({ quoted: { id: "Q", fromMe: true, senderName: "+1 555-0100", timestamp: null, text: "mine", kind: null } });
+    expect(renderChatMd(bundle([r]))).toContain("> Replying to **You**\n>\n> mine\n");
+  });
+
+  it("a quoted media message without text names its kind", () => {
+    const r = record({ quoted: { id: "Q", fromMe: true, senderName: null, timestamp: null, text: "", kind: "video" } });
+    expect(renderChatMd(bundle([r]))).toContain("> Replying to **You**\n>\n> _(Video)_\n");
+  });
+
+  it("a quoted message with neither text nor media says so", () => {
+    const r = record({ quoted: { id: "Q", fromMe: false, senderName: "Bob", timestamp: null, text: "", kind: null } });
+    expect(renderChatMd(bundle([r]))).toContain("> Replying to **Bob**\n>\n> _(no text)_\n");
   });
 
   it("quotedUnavailable renders the unavailable line", () => {

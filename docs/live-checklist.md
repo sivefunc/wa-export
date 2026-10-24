@@ -16,9 +16,10 @@ WhatsApp Web 2.3000.1051605128 · WA-JS 4.7.2 · tested 2026-10-24 on the owner'
 | Image with caption | ✅ | | caption above `![](media/001-photo.jpg)`; 972×646 JPEG, 102 764 bytes |
 | Voice note | ✅ | | `🎤 [voice note, 0:03]`; valid Ogg/Opus, 7 623 bytes |
 | Album | ✅ | | one selected row → both photos exported (fix: album expansion) |
+| Missing file named | ✅ | | `⚠️ File missing (report.pdf): expired on WhatsApp, not re-requested` |
 | Expired media (Aug/Sep) | ✅ | | 5 files reported "expired on WhatsApp, not re-requested"; ZIP still produced; REMOTE_NEED_UPLOAD count unchanged (guard blocked every re-upload request) |
-| PDF that downloads | ⏳ | | every PDF in the test chat had expired; needs a fresh one |
-| Formatted text (`*bold*` …) | ⏳ | | none in the test chat yet |
-| Reply (quoted) | ⏳ | | none in the test chat yet |
-| Video | ⏳ | | none in the test chat yet |
+| PDF that downloads | ✅ | | fresh 21.9 MB PDF, valid `PDF document, version 1.4`, original filename kept |
+| Formatted text | ✅ | | `*Hola*` → `**Hola**`, `_Hola_` unchanged |
+| Reply (quoted) | ✅ | | quote of own text → "Replying to **You**" + quoted text; quote of a video → `_(Video)_` (fixes: quoted fromMe + kind) |
+| Video | ✅ | | MP4 2.8 MB, valid ISO Media |
 | `<a download>` save | ✅ | | ZIP downloaded via the anchor |

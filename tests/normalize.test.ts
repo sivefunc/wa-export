@@ -69,11 +69,28 @@ describe("normalizeMessage", () => {
     const m = normalizeMessage(raw.replyWithQuote, resolveName);
     expect(m.quoted).toEqual({
       id: "OLD",
+      fromMe: false,
       senderName: "Luis Contact",
       timestamp: 1792845000,
       text: "Does this reproduce in Firefox?",
+      kind: null,
     });
     expect(m.quotedUnavailable).toBe(false);
+  });
+
+  it("a quote of my own message is fromMe, by the quoted id or by my jids", () => {
+    // Live 2026-10-24: a quoted text keeps only {type, kind, body}; a quoted video keeps its id.
+    const byId = normalizeMessage({ ...raw.replyWithQuote, quotedMsg: { type: "chat", body: "x", id: { fromMe: true } } }, resolveName);
+    expect(byId.quoted?.fromMe).toBe(true);
+    const byJid = normalizeMessage(raw.replyWithQuote, resolveName, new Set(["456@c.us"]));
+    expect(byJid.quoted?.fromMe).toBe(true);
+    expect(normalizeMessage(raw.replyWithQuote, resolveName).quoted?.fromMe).toBe(false);
+  });
+
+  it("a quoted video has its kind and no thumbnail text", () => {
+    const m = normalizeMessage({ ...raw.replyWithQuote, quotedMsg: { type: "video", body: raw.BASE64_THUMBNAIL, duration: "46" } }, resolveName);
+    expect(m.quoted?.kind).toBe("video");
+    expect(m.quoted?.text).toBe("");
   });
 
   it("marks forwarded messages", () => {
