@@ -42,6 +42,28 @@ describe("whatsappToHtml", () => {
     );
   });
 
+  it("a link inside formatting markers keeps the markers out of the link", () => {
+    const link = (u: string) => `<a href="${u}" target="_blank" rel="noopener noreferrer">${u}</a>`;
+    expect(whatsappToHtml("*https://x.com/a*")).toBe(`<strong>${link("https://x.com/a")}</strong>`);
+    expect(whatsappToHtml("_https://x.com/a_")).toBe(`<em>${link("https://x.com/a")}</em>`);
+  });
+
+  it("code right after a link stays code", () => {
+    expect(whatsappToHtml("https://x.com/`x`")).toBe(
+      '<a href="https://x.com/" target="_blank" rel="noopener noreferrer">https://x.com/</a><code>x</code>',
+    );
+  });
+
+  it("inline code never wraps a code block", () => {
+    expect(whatsappToHtml("`a```b```c`")).toBe("`a<pre><code>b</code></pre>c`");
+  });
+
+  it("a link ending in & keeps the ampersand whole", () => {
+    expect(whatsappToHtml("see https://x.com/?a=1& more")).toBe(
+      'see <a href="https://x.com/?a=1" target="_blank" rel="noopener noreferrer">https://x.com/?a=1</a>&amp; more',
+    );
+  });
+
   it("does not link other schemes", () => {
     expect(whatsappToHtml("javascript:alert(1)")).toBe("javascript:alert(1)");
   });

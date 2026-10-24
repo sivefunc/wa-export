@@ -42,6 +42,8 @@ function formatDuration(sec: number): string {
 }
 
 const senderKey = (r: ExportRecord) => (r.fromMe ? "me" : r.sender.jid || r.sender.name || "unknown");
+// Quotes only carry the sender's name, so names pick the color; a bubble and a reply to it then match.
+const colorKey = (r: ExportRecord) => r.sender.name || senderKey(r);
 const senderName = (r: ExportRecord) => (r.fromMe ? "You" : r.sender.name || r.sender.jid || "Unknown");
 
 /** For documents WhatsApp stores the filename as the caption; don't print it twice. */
@@ -123,7 +125,7 @@ export function renderChatHtml(b: ExportBundle, o: HtmlOptions = {}): HtmlPart[]
     const time = escapeHtml(timeOf(r.timestamp));
     const body: string[] = [];
 
-    if (first && isGroup && !r.fromMe) body.push(`<div class="name" style="color:${colorFor(senderKey(r))}">${escapeHtml(senderName(r))}</div>`);
+    if (first && isGroup && !r.fromMe) body.push(`<div class="name" style="color:${colorFor(colorKey(r))}">${escapeHtml(senderName(r))}</div>`);
     if (r.isForwarded) body.push(`<div class="forwarded">↪ Forwarded</div>`);
     body.push(quoteHtml(r));
     body.push(mediaHtml(r));
