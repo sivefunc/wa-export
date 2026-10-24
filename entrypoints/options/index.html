@@ -1,0 +1,22 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>WA Export settings</title>
+    <meta name="manifest.open_in_tab" content="false" />
+    <style>
+      :root { color-scheme: light dark; --text: #111b21; --muted: #54656f; --bg: #fff; --border: #d1d7db; }
+      @media (prefers-color-scheme: dark) { :root { --text: #e9edef; --muted: #aebac1; --bg: #111b21; --border: #3b4a54; } }
+      body { margin: 0; padding: 16px; background: var(--bg); color: var(--text); font: 14px/1.4 system-ui, -apple-system, "Segoe UI", sans-serif; min-width: 320px; }
+      h1 { font-size: 16px; margin: 0 0 12px; }
+      label { display: flex; flex-direction: column; gap: 4px; margin-bottom: 12px; font-weight: 600; }
+      select { font: inherit; padding: 6px; border: 1px solid var(--border); border-radius: 6px; background: transparent; color: inherit; font-weight: 400; }
+      .note, [role="status"] { color: var(--muted); margin: 4px 0; }
+    </style>
+  </head>
+  <body>
+    <main id="app"></main>
+    <script type="module" src="./main.ts"></script>
+  </body>
+</html>
