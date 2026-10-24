@@ -12,7 +12,7 @@ export interface WppLike {
     get(jid: string): any;
     getActiveChat(): any;
   };
-  contact: { get(jid: string): Promise<any> | any };
+  contact: { get(jid: string): Promise<any> | any; getProfilePictureUrl?(jid: string, full?: boolean): Promise<string | null | undefined> };
   conn?: { getMyUserLid?(): unknown; getMyUserId?(): unknown };
   whatsapp: { MsgStore: { getModelsArray(): any[] } };
 }
@@ -26,6 +26,24 @@ export const REQUIRED_FUNCTIONS = [
 ];
 
 const READY_TIMEOUT_MS = 30_000;
+const AVATAR_TIMEOUT_MS = 10_000;
+const AVATAR_MAX_BYTES = 1024 * 1024;
+
+/** Profile pictures come from WhatsApp's own CDN; never fetch anything else. */
+function isWhatsAppPictureUrl(url: unknown): url is string {
+  try {
+    const u = new URL(String(url));
+    return u.protocol === "https:" && (u.hostname === "whatsapp.net" || u.hostname.endsWith(".whatsapp.net"));
+  } catch {
+    return false;
+  }
+}
+
+function withTimeout<T>(p: Promise<T>, ms: number): Promise<T> {
+  return Promise.race([p, new Promise<T>((_, reject) => setTimeout(() => reject(new Error("timeout")), ms))]);
+}
+
+const fetchPicture = (url: string) => fetch(url, { credentials: "omit", referrerPolicy: "no-referrer" });
 const READY_POLL_MS = 100;
 
 /**
@@ -142,6 +160,7 @@ function errorText(err: unknown): string {
 export function createHandlers(
   getWpp: () => WppLike | undefined,
   getReuploadManager: () => ReuploadManagerLike | null | undefined = () => null,
+  fetchImage: (url: string) => Promise<Response> = fetchPicture,
 ): Handlers {
   // WPP.isReady is unreliable: after a cached reload it can stay false while every function works.
   // Ready means the functions exist and WhatsApp's modules answer a harmless call.
@@ -262,6 +281,25 @@ export function createHandlers(
         guard?.hit.delete(bareId);
       }
       return { mime: blob.type || raw?.mimetype || "application/octet-stream", buffer: await blob.arrayBuffer() };
+    },
+
+    async GET_AVATARS({ jids }) {
+      const wpp = await ready();
+      const getUrl = wpp.contact.getProfilePictureUrl;
+      if (typeof getUrl !== "function") return { avatars: [] };
+      const settled = await Promise.allSettled(
+        [...new Set(jids)].map(async (jid) => {
+          const url = await withTimeout(Promise.resolve(getUrl.call(wpp.contact, jid, false)), AVATAR_TIMEOUT_MS);
+          if (!isWhatsAppPictureUrl(url)) return null;
+          const res = await withTimeout(fetchImage(url), AVATAR_TIMEOUT_MS);
+          const mime = res.headers.get("content-type")?.split(";")[0].trim() ?? "";
+          if (!res.ok || !mime.startsWith("image/")) return null;
+          const buffer = await res.arrayBuffer();
+          return buffer.byteLength && buffer.byteLength <= AVATAR_MAX_BYTES ? { jid, mime, buffer } : null;
+        }),
+      );
+      const avatars = settled.flatMap((r) => (r.status === "fulfilled" && r.value ? [r.value] : []));
+      return { avatars };
     },
   };
 }
