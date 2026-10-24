@@ -1,0 +1,31 @@
+{
+  "name": "wa-export",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Export selected WhatsApp Web messages and media to a ZIP, locally.",
+  "engines": {
+    "node": ">=26"
+  },
+  "scripts": {
+    "dev": "wxt",
+    "dev:firefox": "wxt -b firefox",
+    "build": "wxt build && wxt build -b firefox",
+    "zip": "wxt zip && wxt zip -b firefox",
+    "test": "vitest run",
+    "postinstall": "wxt prepare"
+  },
+  "dependencies": {
+    "@wppconnect/wa-js": "4.7.2",
+    "jszip": "3.10.2"
+  },
+  "devDependencies": {
+    "jsdom": "30.1.3",
+    "playwright": "1.64.1",
+    "typescript": "7.0.2",
+    "vitest": "5.0.5",
+    "web-ext": "10.8.0",
+    "wxt": "0.21.4"
+  },
+  "packageManager": "pnpm@10.29.2"
+}
