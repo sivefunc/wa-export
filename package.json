@@ -14,7 +14,8 @@
     "zip": "wxt zip && wxt zip -b firefox",
     "test": "vitest run",
     "postinstall": "wxt prepare",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "sign:firefox": "scripts/sign-firefox.sh"
   },
   "dependencies": {
     "@wppconnect/wa-js": "4.7.2",

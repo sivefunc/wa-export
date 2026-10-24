@@ -4,3 +4,4 @@ node_modules/
 .live/
 .superpowers/
 .env*
+web-ext-artifacts/

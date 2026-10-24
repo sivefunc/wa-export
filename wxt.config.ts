@@ -6,6 +6,10 @@ const WA_JS_DEST = "vendor/wppconnect-wa.js";
 
 export default defineConfig({
   manifestVersion: 3,
+  zip: {
+    // The sources zip is uploaded to AMO: keep the live WhatsApp profile, secrets and exports out.
+    excludeSources: [".live/**", ".superpowers/**", ".env*", "web-ext-artifacts/**", "**/*.zip"],
+  },
   manifest: ({ browser }) => ({
     name: "WA Export for WhatsApp Web",
     description: "Export selected WhatsApp Web messages and their files to a ZIP, entirely on your computer.",
@@ -29,6 +33,7 @@ export default defineConfig({
       files.push(
         { absoluteSrc: `${WA_JS_DIST}/wppconnect-wa.js`, relativeDest: WA_JS_DEST },
         { absoluteSrc: `${WA_JS_DIST}/wppconnect-wa.js.LICENSE.txt`, relativeDest: `${WA_JS_DEST}.LICENSE.txt` },
+        { absoluteSrc: resolve("THIRD_PARTY_NOTICES.md"), relativeDest: "THIRD_PARTY_NOTICES.md" },
       );
     },
     // WA-JS must run before our page bridge, in the same MAIN-world script list.
