@@ -91,6 +91,26 @@ describe("export controller", () => {
     expect(last()).toEqual({ kind: "hidden" });
   });
 
+  it("a new selection after an export replaces the summary with Export N", async () => {
+    const { c, last } = setup(okResult());
+    c.selectionChanged({ active: true, ids: ["a", "b"] });
+    await c.exportNow();
+    c.selectionChanged({ active: false, ids: [] }); // user leaves select mode; summary stays
+    expect(last().kind).toBe("done");
+    c.selectionChanged({ active: true, ids: [] }); // enters select mode again
+    expect(last().kind).toBe("done");
+    c.selectionChanged({ active: true, ids: ["x"] }); // ticks a message
+    expect(last()).toEqual({ kind: "idle", count: 1 });
+  });
+
+  it("the exported selection itself doesn't dismiss the summary", async () => {
+    const { c, last } = setup(okResult());
+    c.selectionChanged({ active: true, ids: ["a", "b"] });
+    await c.exportNow();
+    c.selectionChanged({ active: true, ids: ["a", "b"] });
+    expect(last().kind).toBe("done");
+  });
+
   it("asks before a large export and passes the answer through", async () => {
     let resolveCollect!: (r: CollectResult) => void;
     const states: UiState[] = [];

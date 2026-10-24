@@ -23,6 +23,9 @@ WhatsApp Web 2.3000.1051605128 · WA-JS 4.7.2 · tested 2026-10-24 on the owner'
 | Reply (quoted) | ✅ | ✅ | quote of own text → "Replying to **You**" + quoted text; quote of a video → `_(Video)_` (fixes: quoted fromMe + kind) |
 | Video | ✅ | ✅ | MP4 2.8 MB, valid ISO Media |
 | `<a download>` save | ✅ | ✅ | ZIP downloaded via the anchor |
+| Group chat, other members' messages | ✅ | | senders with `@lid` ids resolved to their profile names; received image at full size; long formatted message intact |
+| 1:1 chat with an unsaved contact | ✅ | | name from their WhatsApp profile name; links kept as text |
+| Edited message | ✅ | | final text exported (no "edited" mark yet) |
 
 ## Firefox notes
 

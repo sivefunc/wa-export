@@ -21,6 +21,7 @@ export function createExportController(d: ControllerDeps) {
   let state: UiState = { kind: "hidden" };
   let running = false;
   let pendingConfirm: ((ok: boolean) => void) | null = null;
+  let exportedKey = ""; // the selection the current summary belongs to
 
   const set = (s: UiState) => {
     state = s;
@@ -31,13 +32,16 @@ export function createExportController(d: ControllerDeps) {
   return {
     selectionChanged(s: SelectionSnapshot) {
       selection = s;
-      // A result or a question stays on screen until the user acts on it.
+      // A result stays on screen until dismissed, or until the user starts ticking a new selection.
+      const newSelection = s.active && s.ids.length > 0 && s.ids.join() !== exportedKey;
       if (state.kind === "idle" || state.kind === "hidden") showSelection();
+      else if ((state.kind === "done" || state.kind === "error") && newSelection) showSelection();
     },
 
     async exportNow() {
       if (running) return;
       running = true;
+      exportedKey = selection.ids.join();
       try {
         const settings = await d.loadSettings();
         const res = await d.collect({
