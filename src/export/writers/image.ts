@@ -3,7 +3,7 @@ import type { ExportBundle } from "../../types";
 import { exportFilename } from "../naming";
 import { canvasBlob, layOut, pageIsDark, prepareMedia, rasterize } from "../raster/dom";
 import { buildPdf, type PdfPage } from "../raster/pdf";
-import { chooseScale, MAX_SIDE, paginate } from "../raster/plan";
+import { chooseScale, linesIn, MAX_SIDE, paginate } from "../raster/plan";
 import type { Writer } from "./index";
 
 // Large media is read in full to draw it, like the HTML export.
@@ -93,9 +93,7 @@ export const pdfWriter: Writer = {
     for (const [i, s] of slices.entries()) {
       const canvas = await rasterize(doc, laid, s, 2, pageHeight);
       const jpeg = new Uint8Array(await (await canvasBlob(canvas, "image/jpeg", 0.88)).arrayBuffer());
-      const lines = laid.lines
-        .filter((l) => l.y >= s.y0 - 1 && l.y + l.h <= s.y1 + 1)
-        .map((l) => ({ ...l, y: l.y - s.y0 }));
+      const lines = linesIn(laid.lines, s);
       pages.push({ jpeg, pixelWidth: canvas.width, pixelHeight: canvas.height, lines });
       report(40 + Math.floor(((i + 1) / slices.length) * 55));
     }

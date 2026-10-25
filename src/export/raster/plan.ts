@@ -45,3 +45,8 @@ export function chooseScale(w: number, h: number, preferred = 2): number | null 
 export function blocksIn<T extends Block>(blocks: T[], s: Slice): T[] {
   return blocks.filter((b) => b.y < s.y1 && b.y + b.h > s.y0);
 }
+
+/** The text lines of a page, in page coordinates: each line goes to the page holding its middle. */
+export function linesIn<T extends Block & { x: number; w: number }>(lines: T[], s: Slice): T[] {
+  return lines.filter((l) => l.y + l.h / 2 >= s.y0 && l.y + l.h / 2 < s.y1).map((l) => ({ ...l, y: l.y - s.y0 }));
+}

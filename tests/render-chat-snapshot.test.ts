@@ -79,6 +79,19 @@ describe("renderChatSnapshot", () => {
     expect(render([record({ timestamp: T })]).pieces.header).not.toContain("Save as PDF");
   });
 
+  it("drops characters XML can't carry, so the SVG still decodes", () => {
+    const { pieces } = render([record({ timestamp: T, text: "a\u0001b\u000Bc\uFFFEd\uD800e 🐼" })], {}, {}, { chat: { jid: "1@g.us", name: "Te\u0002am" } });
+    const all = pieces.header + pieces.blocks.join("") + pieces.end + pieces.title;
+    expect(all).toContain("abcde 🐼");
+    expect(all).toContain("Team");
+    expect(/[\u0000-\u0008\u000B\u000C\u000E-\u001F\uFFFE\uFFFF]|[\uD800-\uDBFF](?![\uDC00-\uDFFF])|(?<![\uD800-\uDBFF])[\uDC00-\uDFFF]/.test(all)).toBe(false);
+  });
+
+  it("snapshotCss has no viewport-dependent rules, so layout and render agree in any window size", () => {
+    expect(snapshotCss(false)).not.toMatch(/@media \(max-width/);
+    expect(snapshotCss(false)).toContain("direction: ltr");
+  });
+
   it("snapshotCss fixes one theme on the .wa root", () => {
     expect(snapshotCss(false)).toContain("--bg: #efeae2");
     expect(snapshotCss(true)).toContain("--bg: #0b141a");

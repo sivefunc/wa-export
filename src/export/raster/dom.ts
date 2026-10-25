@@ -25,18 +25,23 @@ async function own(blob: Blob): Promise<Blob> {
 
 /** A data: URL of the image at most maxW pixels wide; PNG keeps transparency (stickers). */
 async function downscale(doc: Document, blob: Blob, maxW: number, png: boolean): Promise<string | null> {
+  let bmp: ImageBitmap | undefined;
+  const decoding = own(blob).then((b) => createImageBitmap(b));
   try {
-    const bmp = await timeout(createImageBitmap(await own(blob)), 10_000);
+    bmp = await timeout(decoding, 10_000);
     const w = Math.min(maxW, bmp.width);
     const h = Math.round((bmp.height * w) / bmp.width);
     const c = doc.createElement("canvas");
     c.width = w;
     c.height = h;
     c.getContext("2d")!.drawImage(bmp, 0, 0, w, h);
-    bmp.close();
     return c.toDataURL(png ? "image/png" : "image/jpeg", 0.86);
   } catch {
+    // A decode that finishes after the timeout still gets its bitmap released.
+    decoding.then((late) => late.close(), () => {});
     return null;
+  } finally {
+    bmp?.close();
   }
 }
 
@@ -62,6 +67,7 @@ async function firstFrame(doc: Document, blob: Blob, maxW: number): Promise<stri
     return null;
   } finally {
     v.removeAttribute("src");
+    v.load(); // releases the decoder now rather than at garbage collection
     URL.revokeObjectURL(url);
   }
 }
@@ -86,12 +92,16 @@ export async function prepareMedia(doc: Document, b: ExportBundle, onStep: () =>
     const m = r.exportedMedia;
     const blob = m && b.media.get(m.path);
     if (!m || !blob || !r.media) continue;
-    if (r.media.kind === "image") {
-      const url = await downscale(doc, blob, 660, false);
+    if (r.media.kind === "image" || r.media.kind === "sticker") {
+      const sticker = r.media.kind === "sticker";
+      const url = await downscale(doc, blob, sticker ? 380 : 660, sticker);
       if (url) srcs.set(`media:${m.path}`, url);
-    } else if (r.media.kind === "sticker") {
-      const url = await downscale(doc, blob, 380, true);
-      if (url) srcs.set(`media:${m.path}`, url);
+      else {
+        // Never silent: the image shows a card instead, and the summary says why.
+        const problem = { messageId: r.id, code: "media_error" as const, detail: "couldn't be drawn in the image" };
+        r.problems.push(problem);
+        b.problems.push(problem);
+      }
     } else if (r.media.kind === "video") {
       const url = await firstFrame(doc, blob, 660);
       if (url) posters.set(m.path, url);
@@ -105,6 +115,16 @@ export async function prepareMedia(doc: Document, b: ExportBundle, onStep: () =>
   return { srcs, posters };
 }
 
+/** The box an element's content is clipped to (overflow hidden/clip up to the root), if any. */
+function clipBox(el: Element, root: Element): DOMRect | null {
+  const view = root.ownerDocument.defaultView!;
+  for (let e: Element | null = el; e && e !== root; e = e.parentElement) {
+    const o = view.getComputedStyle(e);
+    if (o.overflowY !== "visible" || o.overflowX !== "visible") return e.getBoundingClientRect();
+  }
+  return null;
+}
+
 /** Text of every visible line, measured word by word so wrapped lines come out separately. */
 function measureLines(root: Element, base: DOMRect): TextLine[] {
   const lines: TextLine[] = [];
@@ -115,11 +135,13 @@ function measureLines(root: Element, base: DOMRect): TextLine[] {
     const parent = node.parentElement;
     if (!parent || parent.closest("style") || view.getComputedStyle(parent).visibility === "hidden") continue;
     let line: TextLine | null = null;
+    const clip = clipBox(parent, root); // e.g. a quote clamped to 3 lines: hidden lines aren't searchable text
     for (const word of node.data.matchAll(/\S+/g)) {
       range.setStart(node, word.index!);
       range.setEnd(node, word.index! + word[0].length);
       const r = range.getClientRects()[0];
       if (!r || !r.width) continue;
+      if (clip && (r.top + r.height / 2 < clip.top || r.top + r.height / 2 > clip.bottom)) continue;
       const box = { x: r.left - base.left, y: r.top - base.top, w: r.width, h: r.height };
       if (line && Math.abs(line.y - box.y) < 3) {
         line.w = box.x + box.w - line.x;
@@ -140,6 +162,7 @@ export async function layOut(doc: Document, b: ExportBundle, media: Awaited<Retu
   const css = `${snapshotCss(dark)}\n.slot > * { margin: 0 !important; }`;
   const host = doc.createElement("div");
   host.setAttribute("aria-hidden", "true");
+  host.dir = "ltr"; // the render is left-to-right; don't inherit an RTL page direction while measuring
   host.style.cssText = `position:fixed;left:-100000px;top:0;width:${PAGE_WIDTH}px;pointer-events:none;contain:layout paint`;
   const shadow = host.attachShadow({ mode: "closed" });
   shadow.innerHTML = `<style>${css}</style><div class="wa" style="width:${PAGE_WIDTH}px">${pieces.header}<main class="chat">${pieces.blocks.join("")}${pieces.end}</main></div>`;

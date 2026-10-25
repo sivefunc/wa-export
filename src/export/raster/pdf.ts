@@ -34,10 +34,15 @@ const utf16Hex = (ch: string) => Array.from({ length: ch.length }, (_, i) => hex
  * invisible; the page image shows the real look.
  */
 export function buildPdf(pages: PdfPage[], g: PdfGeometry): Uint8Array<ArrayBuffer> {
+  // Two-byte codes: CIDs 1–0xFFFE are distinct characters; any beyond share 0xFFFF, mapped to U+FFFD.
   const cids = new Map<string, number>();
+  let overflow = false;
   const cidOf = (ch: string) => {
     let cid = cids.get(ch);
-    if (cid === undefined) cids.set(ch, (cid = cids.size + 1));
+    if (cid === undefined) {
+      if (cids.size >= 0xfffe) return ((overflow = true), 0xffff);
+      cids.set(ch, (cid = cids.size + 1));
+    }
     return cid;
   };
   const k = g.widthPt / g.cssWidth;
@@ -67,6 +72,7 @@ export function buildPdf(pages: PdfPage[], g: PdfGeometry): Uint8Array<ArrayBuff
   );
   objects.push("<< /Type /FontDescriptor /FontName /WAExportText /Flags 4 /FontBBox [0 -200 1000 800] /ItalicAngle 0 /Ascent 800 /Descent -200 /CapHeight 700 /StemV 80 >>");
   const entries = [...cids].map(([ch, cid]) => `<${hex4(cid)}> <${utf16Hex(ch)}>`);
+  if (overflow) entries.push("<FFFF> <FFFD>");
   const chunks: string[] = [];
   for (let i = 0; i < entries.length; i += 100) {
     const part = entries.slice(i, i + 100);

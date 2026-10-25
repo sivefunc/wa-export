@@ -121,9 +121,14 @@ export interface SnapshotOptions extends HtmlOptions {
   posters: Map<string, string>; // media path → first-frame data: URL
 }
 
+// Characters XML 1.0 can't carry (controls, U+FFFE/FFFF, lone surrogates): one in any message would make the
+// <foreignObject> SVG fail to decode, so snapshots drop them.
+const NOT_XML = /[^\u0009\u000A\u000D\u0020-\uD7FF\uE000-\uFFFD\u{10000}-\u{10FFFF}]/gu;
+const cleanXml = (s: string) => s.replace(NOT_XML, "");
+
 /** The static look for images and PDF: no script or controls, media as data: URLs. */
 export function renderChatSnapshot(b: ExportBundle, o: SnapshotOptions): ChatPieces {
-  return buildChat(b, o, {
+  const p = buildChat(b, o, {
     snapshot: true,
     attrs: (from, key) => {
       const url = o.srcs.get(`${from}:${key}`);
@@ -131,6 +136,7 @@ export function renderChatSnapshot(b: ExportBundle, o: SnapshotOptions): ChatPie
     },
     poster: (path) => o.posters.get(path) ?? null,
   });
+  return { title: cleanXml(p.title), header: cleanXml(p.header), blocks: p.blocks.map(cleanXml), end: cleanXml(p.end) };
 }
 
 /** Static waveform bars, the same for a given message every time. */
@@ -386,7 +392,6 @@ body, .wa {
 #lightbox { position: fixed; inset: 0; z-index: 9; display: grid; place-items: center; background: rgba(11, 20, 26, .92); cursor: zoom-out; }
 #lightbox[hidden] { display: none; }
 #lightbox img { max-width: 95vw; max-height: 95vh; }
-@media (max-width: 600px) { .msg { max-width: 85%; } .chat { padding: 8px 10px 18px; } }
 @media print {
   @page { margin: 12mm; }
   * { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
@@ -403,10 +408,13 @@ const CSS = `
 @media (prefers-color-scheme: dark) {
   :root {${DARK}}
 }
-${BASE}`;
+${BASE}
+@media (max-width: 600px) { .msg { max-width: 85%; } .chat { padding: 8px 10px 18px; } }`;
 
 // Snapshots (images, PDF): one fixed theme, a static header, and still versions of video and audio.
+// No viewport-dependent rules: the offscreen layout and the SVG render must agree whatever WhatsApp's window size.
 const SNAPSHOT_CSS = `
+.wa { direction: ltr; }
 .wa .top { position: static; }
 .video.still { position: relative; display: block; width: 330px; max-width: 100%; aspect-ratio: 16 / 9; border-radius: 6px;
   background: #0b141a; overflow: hidden; }
