@@ -1,7 +1,9 @@
 // Headless Firefox check of the content-script paths unit tests can't cover:
-// the real ZIP and HTML writers fed page-world bytes (the ZIP once hung at 33%), and <a download> saving.
-// Usage: pnpm test:firefox   Env: FIREFOX_BINARY (optional; Selenium Manager finds Firefox and geckodriver).
-import { cpSync, existsSync, mkdtempSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
+// the real writers fed page-world bytes (the ZIP once hung at 33%), the PNG/JPEG/PDF snapshot pipeline
+// (canvas, SVG foreignObject, video frames) on the demo chat, and <a download> saving.
+// Usage: pnpm test:firefox   Env: FIREFOX_BINARY (optional; Selenium Manager finds Firefox and geckodriver),
+// WA_EXPORT_SMOKE_OUT (optional: a folder to keep the demo PNG/JPEG/PDF in).
+import { cpSync, existsSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join, relative } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -17,6 +19,9 @@ const downloads = join(work, "downloads");
 cpSync(join(here, "fixture"), ext, { recursive: true });
 const bundle = await rolldown({ input: join(here, "entry.ts") });
 await bundle.write({ format: "iife", file: join(ext, "writer.js") });
+const assetsDir = join(here, "../../docs/demo/assets");
+const assets = Object.fromEntries(readdirSync(assetsDir).map((f) => [f, readFileSync(join(assetsDir, f)).toString("base64")]));
+writeFileSync(join(ext, "assets.js"), `globalThis.__waDemoAssets = ${JSON.stringify(assets)};`);
 
 // An .xpi is a zip of the add-on folder (built with JSZip so it works on any OS).
 const xpiZip = new JSZip();
@@ -52,8 +57,15 @@ try {
   console.log(`Firefox ${version}`);
   console.log(`ZIP writer with page bytes: ${result.zip?.ok ? "ok" : "FAIL"} ${JSON.stringify(result.zip ?? result.error)}`);
   console.log(`HTML writer with page bytes: ${result.html?.ok ? "ok" : "FAIL"} ${JSON.stringify(result.html ?? result.error)}`);
+  for (const id of ["png", "jpeg", "pdf"]) {
+    console.log(`${id.toUpperCase()} writer on the demo chat: ${result[id]?.ok ? "ok" : "FAIL"} ${JSON.stringify(result[id] ?? result.error)}`);
+  }
   console.log(`<a download> from content script: ${saved ? "ok" : "FAIL"}`);
-  failed = !result.zip?.ok || !result.html?.ok || !saved;
+  if (process.env.WA_EXPORT_SMOKE_OUT) {
+    mkdirSync(process.env.WA_EXPORT_SMOKE_OUT, { recursive: true });
+    for (const f of readdirSync(downloads).filter((f) => f.startsWith("demo-"))) cpSync(join(downloads, f), join(process.env.WA_EXPORT_SMOKE_OUT, f));
+  }
+  failed = !result.zip?.ok || !result.html?.ok || !result.png?.ok || !result.jpeg?.ok || !result.pdf?.ok || !saved;
 } finally {
   await driver.quit();
 }

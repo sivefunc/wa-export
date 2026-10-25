@@ -16,10 +16,11 @@ pnpm zip            # store packages + the Firefox sources zip
 pnpm test           # unit tests; the manifest/package tests read the build output, so build + zip first
 pnpm typecheck
 pnpm test:firefox   # headless Firefox checks that unit tests can't do (needs Firefox installed)
+pnpm test:chromium  # the PNG/JPEG/PDF pipeline in Chromium (pnpm exec playwright install chromium first)
 pnpm dev            # Chromium with hot reload; pnpm dev:firefox for Firefox
 ```
 
-CI runs the same commands on Node 22, 24 and 26, plus `test:firefox`.
+CI runs the same commands on Node 22, 24 and 26, plus `test:firefox` and `test:chromium`.
 
 ## How it's built
 
@@ -78,7 +79,7 @@ Use fictitious values in tests and docs, such as `+1 555-0100` and `123@c.us`. `
 - Use [Conventional Commits](https://www.conventionalcommits.org/): `feat:`, `fix:`, `docs:`, `test:`, `chore:`.
 - Keep one logical change per commit, with tests in the same commit as the code.
 - Write the failing test first. Bugs found in a real browser get a regression test, or a `test:firefox` check if they're Firefox-specific.
-- Before opening a PR, run `pnpm typecheck && pnpm build && pnpm zip && pnpm test`, plus `pnpm test:firefox` if you touched the bridge, writers or saving.
+- Before opening a PR, run `pnpm typecheck && pnpm build && pnpm zip && pnpm test`, plus `pnpm test:firefox` (and `pnpm test:chromium` for PNG/JPEG/PDF) if you touched the bridge, writers or saving.
 
 ## Adding an export format or ordering
 
