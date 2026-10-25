@@ -61,7 +61,7 @@ export function createExportController(d: ControllerDeps) {
         try {
           const writing = (done: number) => set({ kind: "working", stage: "writing", fileType: writer.fileType, done, total: 100 });
           writing(0);
-          const { blob, filename } = await writer.write(res.bundle, writing);
+          const { blob, filename } = await writer.write(res.bundle, writing, settings);
           d.save(blob, filename);
         } catch (err) {
           return set({ kind: "error", message: `Couldn't create the export file: ${errorText(err)}` });

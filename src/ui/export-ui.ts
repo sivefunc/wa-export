@@ -1,6 +1,6 @@
 import { orderings } from "../export/orderings";
 import { writers } from "../export/writers";
-import type { Settings } from "../settings";
+import { longImageChoices, type Settings } from "../settings";
 import { findForwardButton, toolbarSlot } from "./placement";
 import { buttonLabel, progressFraction, type UiState } from "./state";
 
@@ -97,6 +97,7 @@ const ICONS = {
     "m9.25 22-.4-3.2a7.6 7.6 0 0 1-1.18-.68l-2.97 1.25-2.75-4.75 2.58-1.95a7.6 7.6 0 0 1 0-1.34L1.95 9.38l2.75-4.76 2.97 1.25c.37-.27.77-.5 1.18-.67l.4-3.2h5.5l.4 3.2c.42.17.81.4 1.18.67l2.97-1.25 2.75 4.76-2.58 1.95a7.6 7.6 0 0 1 0 1.34l2.58 1.95-2.75 4.75-2.97-1.25c-.37.27-.76.5-1.18.68l-.4 3.2h-5.5Zm2.8-6.5a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7Z",
   format: "M8 18h8v-2H8v2Zm0-4h8v-2H8v2Zm-2 8a2 2 0 0 1-2-2V4c0-1.1.9-2 2-2h8l6 6v12a2 2 0 0 1-2 2H6Zm7-13V4H6v16h12V9h-5Z",
   order: "M3 18v-2h6v2H3Zm0-5v-2h12v2H3Zm0-5V6h18v2H3Z",
+  image: "M5 21a2 2 0 0 1-2-2V5c0-1.1.9-2 2-2h14a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H5Zm1-4h12l-3.75-5-3 4L9 13l-3 4Z",
   caret: "M10 17V7l5 5-5 5Z",
   check: "M9.55 18 3.85 12.3l1.43-1.42 4.27 4.27 9.18-9.18 1.42 1.43L9.55 18Z",
 };
@@ -112,9 +113,18 @@ interface Choice {
   hint: string;
 }
 
-const MENU: { name: SettingName; text: string; icon: keyof typeof ICONS; choices: () => Choice[] }[] = [
+const IMAGE_FORMATS = new Set(["png", "jpeg"]);
+
+const MENU: { name: SettingName; text: string; icon: keyof typeof ICONS; choices: () => Choice[]; when?: (s: Settings) => boolean }[] = [
   { name: "format", text: "Format", icon: "format", choices: () => Object.values(writers).map((w) => ({ id: w.id, text: w.fileType, hint: w.description })) },
   { name: "order", text: "Order", icon: "order", choices: () => Object.values(orderings).map((o) => ({ id: o.id, text: o.shortLabel, hint: o.label })) },
+  {
+    name: "longImages",
+    text: "Long images",
+    icon: "image",
+    choices: () => Object.values(longImageChoices).map((c) => ({ id: c.id, text: c.shortLabel, hint: c.hint })),
+    when: (s) => IMAGE_FORMATS.has(s.format),
+  },
 ];
 
 interface MenuState {
@@ -134,7 +144,7 @@ interface Fx {
 const LEAVE_MS = 150;
 
 function menuHtml(m: MenuState, fx: Fx): string {
-  const entries = MENU.map((entry) => {
+  const entries = MENU.filter((entry) => !entry.when || entry.when(m.settings)).map((entry) => {
     const choices = entry.choices();
     const current = choices.find((c) => c.id === m.settings[entry.name]) ?? choices[0];
     const open = m.sub === entry.name;

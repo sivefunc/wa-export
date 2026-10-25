@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { chooseScale, paginate } from "../src/export/raster/plan";
+import { blocksIn, chooseScale, paginate } from "../src/export/raster/plan";
 
 const blocks = (...hs: number[]) => {
   let y = 0;
@@ -52,5 +52,17 @@ describe("chooseScale", () => {
 
   it("returns null when even 1x doesn't fit", () => {
     expect(chooseScale(900, 40000)).toBeNull();
+  });
+});
+
+describe("blocksIn", () => {
+  it("takes the blocks of a slice only, not the next one that starts at its end", () => {
+    const bs = blocks(100, 100, 100); // 0-100, 102-202, 204-304
+    expect(blocksIn(bs, { y0: 0, y1: 204 }).map((b) => b.y)).toEqual([0, 102]);
+    expect(blocksIn(bs, { y0: 204, y1: 400 }).map((b) => b.y)).toEqual([204]);
+  });
+
+  it("includes a tall block cut by the slice", () => {
+    expect(blocksIn([{ y: 0, h: 900 }], { y0: 300, y1: 600 })).toHaveLength(1);
   });
 });

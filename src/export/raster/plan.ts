@@ -40,3 +40,8 @@ export function chooseScale(w: number, h: number, preferred = 2): number | null 
   const scale = Math.min(preferred, MAX_SIDE / Math.max(w, h), Math.sqrt(MAX_AREA / (w * h)));
   return scale >= 1 ? Math.round(scale * 1e6) / 1e6 : null;
 }
+
+/** The blocks drawn in a slice: those overlapping [y0, y1). A block starting at y1 belongs to the next slice. */
+export function blocksIn<T extends Block>(blocks: T[], s: Slice): T[] {
+  return blocks.filter((b) => b.y < s.y1 && b.y + b.h > s.y0);
+}
