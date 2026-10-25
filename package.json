@@ -18,7 +18,8 @@
     "sign:firefox": "scripts/sign-firefox.sh",
     "test:firefox": "node scripts/firefox-smoke/run.mjs",
     "demo:assets": "node scripts/demo/make-assets.mjs",
-    "demo": "node scripts/demo/render.mjs"
+    "demo": "node scripts/demo/render.mjs",
+    "demo:banner": "node scripts/demo/banner.mjs"
   },
   "dependencies": {
     "@wppconnect/wa-js": "4.7.2",

@@ -1,0 +1,213 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>WA Export — local message exports</title>
+  <style>
+    html, body { margin: 0; background: #111416; }
+    canvas { display: block; width: 1280px; height: 320px; }
+  </style>
+</head>
+<body>
+<canvas id="banner" width="2560" height="640" role="img"
+  aria-label="WA Export. Export selected WhatsApp Web messages to ZIP or HTML — locally."></canvas>
+<script>
+(() => {
+  'use strict';
+  window.bannerReady = false;
+  const W = 1280, H = 320, DPR = 2, CW = 6, CH = 10;
+  const canvas = document.getElementById('banner');
+  const ctx = canvas.getContext('2d');
+  ctx.scale(DPR, DPR);
+  const ramp = ' .,:;-=+*%#@';
+  const clamp = (n, a = 0, b = 1) => Math.max(a, Math.min(b, n));
+  const mix = (a, b, t) => a + (b - a) * t;
+  const smooth = t => t * t * (3 - 2 * t);
+  const color = (a, b, t) => `rgb(${a.map((v, i) => Math.round(mix(v, b[i], clamp(t)))).join(',')})`;
+  const character = v => ramp[Math.round(clamp(v) * (ramp.length - 1))];
+
+  // Fixed seed, fixed noise lattice, one frame: no network or clock inputs.
+  let seed = 0x57414558;
+  function random() {
+    seed ^= seed << 13; seed ^= seed >>> 17; seed ^= seed << 5;
+    return (seed >>> 0) / 4294967296;
+  }
+  const lattice = Float32Array.from({ length: 4096 }, random);
+  function noise(x, y) {
+    const ix = Math.floor(x), iy = Math.floor(y);
+    const u = smooth(x - ix), v = smooth(y - iy);
+    const at = (a, b) => lattice[((b & 63) * 64) + (a & 63)];
+    return mix(mix(at(ix, iy), at(ix + 1, iy), u),
+               mix(at(ix, iy + 1), at(ix + 1, iy + 1), u), v);
+  }
+  function field(x, y) {
+    const radial = Math.exp(-(((x - 720) / 590) ** 2 + ((y - 140) / 250) ** 2));
+    const plasma = 0.5 + 0.25 * Math.sin(x / 240 + 1.7 * Math.sin(y / 180))
+      + 0.25 * Math.cos(y / 150 - x / 370);
+    let streaks = 0;
+    for (const offset of [-295, 140, 625]) {
+      const distance = (x - 1.75 * y - offset) / 2.02;
+      streaks += Math.exp(-((distance / 15) ** 2));
+    }
+    return clamp(0.31 * radial + 0.31 * plasma
+      + 0.28 * noise(x / 220 + 8, y / 180 + 13) + 0.10 * streaks);
+  }
+
+  function polygon(x, y, points) {
+    let d = Infinity, inside = false;
+    for (let i = 0, j = points.length - 1; i < points.length; j = i++) {
+      const [ax, ay] = points[j], [bx, by] = points[i];
+      const ex = bx - ax, ey = by - ay;
+      const t = clamp(((x - ax) * ex + (y - ay) * ey) / (ex * ex + ey * ey));
+      d = Math.min(d, Math.hypot(x - ax - ex * t, y - ay - ey * t));
+      if ((ay > y) !== (by > y) && x < ax + (y - ay) * ex / ey) inside = !inside;
+    }
+    return inside ? -d : d;
+  }
+  function cubic(a, b, c, d, t) {
+    const u = 1 - t;
+    return [0, 1].map(i => u ** 3 * a[i] + 3 * u * u * t * b[i]
+      + 3 * u * t * t * c[i] + t ** 3 * d[i]);
+  }
+  // A 250px circular body; the curved tail extends 50px down-left.
+  // Combined bounds are y=30..290, centered on the 320px canvas.
+  // This is a generic chat/export symbol: no handset or brand-logo geometry.
+  const tail = [];
+  const tailCurves = [
+    [[155, 218], [169, 247], [160, 274], [142, 290]],
+    [[142, 290], [178, 288], [207, 270], [228, 245]],
+    [[228, 245], [205, 232], [177, 221], [155, 218]]
+  ];
+  for (const curve of tailCurves) {
+    for (let i = 0; i < 16; i++) tail.push(cubic(...curve, i / 16));
+  }
+  function bubble(x, y) {
+    const a = Math.hypot(x - 250, y - 155) - 125;
+    const b = polygon(x, y, tail);
+    const h = clamp(0.5 + 0.5 * (b - a) / 7);
+    return mix(b, a, h) - 7 * h * (1 - h);
+  }
+  function stroke(x, y, ax, ay, bx, by, radius) {
+    const dx = bx - ax, dy = by - ay;
+    const t = clamp(((x - ax) * dx + (y - ay) * dy) / (dx * dx + dy * dy));
+    return Math.hypot(x - ax - t * dx, y - ay - t * dy) - radius;
+  }
+  function exportMark(x, y) {
+    return Math.min(
+      stroke(x, y, 218, 173, 294, 97, 9),
+      polygon(x, y, [[306, 85], [306, 135], [256, 85]]),
+      stroke(x, y, 201, 181, 201, 221, 9),
+      stroke(x, y, 201, 221, 299, 221, 9),
+      stroke(x, y, 299, 221, 299, 181, 9)
+    );
+  }
+
+  // Cell-sized neighbors make both outlines exactly one ASCII cell wide.
+  const neighbors = [[-CW, 0], [CW, 0], [0, -CH], [0, CH]];
+
+  // A domed face with a bright top-left highlight and a medium-green floor.
+  function lighting(x, y) {
+    let nx = (x - 250) / 125, ny = (y - 155) / 125;
+    const nz = Math.sqrt(Math.max(0.035, 1 - nx * nx - ny * ny));
+    const length = Math.hypot(nx, ny, nz);
+    nx /= length; ny /= length;
+    const z = nz / length;
+    const diffuse = clamp(-0.52 * nx - 0.61 * ny + 0.60 * z);
+    const specular = Math.pow(clamp(-0.29 * nx - 0.35 * ny + 0.89 * z), 22);
+    return clamp(0.78 * diffuse + 0.27 * specular);
+  }
+  const greenShadow = [26, 122, 69], green = [37, 211, 102];
+  const greenLight = [185, 246, 202];
+  function greenColor(t) {
+    return t < 0.64 ? color(greenShadow, green, t / 0.64)
+      : color(green, greenLight, (t - 0.64) / 0.36);
+  }
+
+  // The large font is only a mask. All visible title pixels are ASCII cells.
+  const mask = document.createElement('canvas');
+  mask.width = W; mask.height = H;
+  const mc = mask.getContext('2d', { willReadFrequently: true });
+  mc.font = '900 150px "Helvetica Neue", Arial, sans-serif';
+  mc.fillStyle = '#fff';
+  mc.textBaseline = 'alphabetic';
+  mc.fillText('WA Export', 470, 187, 730);
+  const pixels = mc.getImageData(0, 0, W, H).data;
+  function coverage(x, y) {
+    let sum = 0;
+    for (let yy = y - CH / 2; yy < y + CH / 2; yy++) {
+      for (let xx = x - CW / 2; xx < x + CW / 2; xx++) {
+        if (xx >= 0 && xx < W && yy >= 0 && yy < H)
+          sum += pixels[(yy * W + xx) * 4 + 3] / 255;
+      }
+    }
+    return sum / (CW * CH);
+  }
+
+  ctx.fillStyle = '#111416';
+  ctx.fillRect(0, 0, W, H);
+  ctx.font = 'bold 10px "Courier New", monospace';
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  for (let row = 0; row < H / CH; row++) {
+    for (let col = 0; col < Math.floor(W / CW); col++) {
+      const x = col * CW + CW / 2, y = row * CH + CH / 2;
+      const n = field(x, y);
+      const vignette = clamp(1 - 0.45 * Math.pow(Math.hypot((x - 640) / 820, (y - 160) / 290), 1.5));
+      const dither = (random() - 0.5) * 0.035;
+      const texture = random();
+      let value = clamp(0.075 + n * vignette * 0.34 + dither);
+      let ink = color([31, 36, 39], [66, 73, 78], n * vignette);
+      // Fade the background around the title and caption without a hard band.
+      const quiet = Math.exp(-(((x - 820) / 400) ** 4 + ((y - 164) / 101) ** 4));
+      ink = color([17, 20, 22], ink.match(/\d+/g).map(Number), 1 - quiet * 0.40);
+      const d = bubble(x, y);
+      if (d > 0 && d < 75) {
+        const halo = Math.exp(-d / 23);
+        ink = color(ink.match(/\d+/g).map(Number), [32, 115, 65], halo * 0.61);
+        value = Math.max(value, 0.16 + halo * 0.20);
+      }
+      let glyph;
+      if (d <= 0) {
+        const light = lighting(x, y);
+        const mark = exportMark(x, y);
+        ink = greenColor(light);
+        value = clamp(0.55 + 0.45 * light + dither, 0.55, 1);
+        // Uniform bright rim around the entire silhouette, including the tail.
+        if (neighbors.some(([dx, dy]) => bubble(x + dx, y + dy) > 0)) {
+          ink = '#b9f6ca';
+          glyph = (row + col) % 2 ? '#' : '@';
+        }
+        // Composite the outlined export mark last, above all face shading.
+        if (mark > 0 && neighbors.some(([dx, dy]) => exportMark(x + dx, y + dy) <= 0)) {
+          ink = '#0b3d2a';
+          glyph = (row + col) % 2 ? ':' : '.';
+        }
+        if (mark <= 0) {
+          ink = '#e8fff0';
+          glyph = (row + col) % 2 ? '@' : '#';
+        }
+      }
+      const text = coverage(x, y);
+      if (text >= 0.12) {
+        const solid = text >= 0.46;
+        ink = solid ? color([224, 233, 231], [248, 252, 249], (1 - y / H) * 0.65)
+          : color([76, 87, 88], [211, 225, 220], text / 0.46);
+        glyph = solid ? '@#%'[Math.floor(texture * 3)] : character(0.25 + text * 1.05);
+      }
+      ctx.fillStyle = ink;
+      ctx.fillText(glyph || character(value), x, y);
+    }
+  }
+
+  // Conventional small type, with the complete title/caption block centered
+  // vertically on the bubble. The hero, title and background remain ASCII.
+  ctx.font = '13px "Courier New", monospace';
+  ctx.textAlign = 'left';
+  ctx.fillStyle = '#a4b0b2';
+  ctx.fillText('Export selected WhatsApp Web messages to ZIP or HTML — locally.', 474, 243);
+  window.bannerReady = true;
+})();
+</script>
+</body>
+</html>
