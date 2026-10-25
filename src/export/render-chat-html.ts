@@ -11,6 +11,24 @@ export interface HtmlOptions {
   locale?: string; // dates and times; undefined = the browser's
 }
 
+/**
+ * Where media comes from. The interactive page gets placeholders the writer fills with base64; a snapshot
+ * (for images and PDF) gets data: URLs prepared beforehand, keyed "media:<path>" / "avatars:<jid>".
+ */
+interface Source {
+  snapshot: boolean;
+  attrs(from: "media" | "avatars", key: string, mime: string): string | null;
+  poster(path: string): string | null; // a video's first frame (snapshot only)
+}
+
+/** The page cut into the pieces a snapshot lays out and paginates. */
+export interface ChatPieces {
+  title: string;
+  header: string; // the <header class="top"> element
+  blocks: string[]; // problems box, day chips and messages, in order
+  end: string;
+}
+
 const KIND_ICONS: Record<MediaKind, string> = {
   image: "📷",
   video: "🎥",
@@ -53,34 +71,91 @@ function visibleText(r: ExportRecord): string {
 }
 
 export function renderChatHtml(b: ExportBundle, o: HtmlOptions = {}): HtmlPart[] {
+  const media: HtmlPart[] = [];
+  const ids = new Map<string, string>(); // each file and avatar is embedded once
+  const source: Source = {
+    snapshot: false,
+    attrs(from, key, mime) {
+      let id = ids.get(`${from}:${key}`);
+      if (!id) {
+        id = `m${media.length + 1}`;
+        media.push({ from, key, id, mime });
+        ids.set(`${from}:${key}`, id);
+      }
+      return `data-media="${id}" data-mime="${escapeHtml(mime)}"`;
+    },
+    poster: () => null,
+  };
+  const pieces = buildChat(b, o, source);
+  const parts: HtmlPart[] = [];
+  const push = (s: string) => parts.push(s);
+
+  push(`<!doctype html>
+<html lang="${escapeHtml(o.locale ?? "en")}">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; img-src blob:; media-src blob:; style-src 'unsafe-inline'; script-src 'unsafe-inline'; base-uri 'none'; form-action 'none'">
+<meta name="generator" content="WA Export">
+<title>${escapeHtml(pieces.title)}</title>
+<style>${CSS}</style>
+</head>
+<body>
+${pieces.header}
+<main class="chat">
+${pieces.blocks.join("\n")}
+${pieces.end}
+</main>
+<div id="lightbox" hidden><img alt=""></div>
+`);
+  parts.push(...media);
+  push(`<script>${SCRIPT}</script>
+</body>
+</html>
+`);
+  return parts;
+}
+
+export interface SnapshotOptions extends HtmlOptions {
+  srcs: Map<string, string>; // "media:<path>" / "avatars:<jid>" → data: URL
+  posters: Map<string, string>; // media path → first-frame data: URL
+}
+
+/** The static look for images and PDF: no script or controls, media as data: URLs. */
+export function renderChatSnapshot(b: ExportBundle, o: SnapshotOptions): ChatPieces {
+  return buildChat(b, o, {
+    snapshot: true,
+    attrs: (from, key) => {
+      const url = o.srcs.get(`${from}:${key}`);
+      return url ? `src="${escapeHtml(url)}"` : null;
+    },
+    poster: (path) => o.posters.get(path) ?? null,
+  });
+}
+
+/** Static waveform bars, the same for a given message every time. */
+function waveHtml(seed: string): string {
+  let h = 2166136261;
+  for (const c of seed) h = Math.imul(h ^ c.charCodeAt(0), 16777619);
+  const bars: string[] = [];
+  for (let i = 0; i < 28; i++) {
+    h = Math.imul(h ^ (h >>> 13), 1274126177);
+    bars.push(`<i style="height:${4 + ((h >>> 0) % 17)}px"></i>`);
+  }
+  return `<span class="wave">${bars.join("")}</span>`;
+}
+
+function buildChat(b: ExportBundle, o: HtmlOptions, src: Source): ChatPieces {
   const dayOf = (ts: number) => new Date(ts * 1000).toLocaleDateString(o.locale, { day: "numeric", month: "long", year: "numeric" });
   const timeOf = (ts: number | null) =>
     ts == null ? "" : new Date(ts * 1000).toLocaleTimeString(o.locale, { hour: "2-digit", minute: "2-digit" });
   const isGroup = Boolean(b.chat.jid?.endsWith("@g.us")) || new Set(b.records.filter((r) => !r.fromMe).map(senderKey)).size > 1;
-  const parts: HtmlPart[] = [];
-  const media: HtmlPart[] = [];
-  const push = (s: string) => parts.push(s);
-
-  const mediaId = (path: string, mime: string) => {
-    const id = `m${media.length + 1}`;
-    media.push({ from: "media", key: path, id, mime });
-    return id;
-  };
-  const avatarIds = new Map<string, string>();
 
   /** A round picture, embedded once per jid, or the initial on a colored circle like WhatsApp's default. */
   function avatarHtml(jid: string | null, name: string, cls: string, color: string): string {
     const blob = jid ? b.avatars?.get(jid) : undefined;
-    if (jid && blob) {
-      const mime = blob.type || "image/jpeg";
-      let id = avatarIds.get(jid);
-      if (!id) {
-        id = `m${media.length + 1}`;
-        media.push({ from: "avatars", key: jid, id, mime });
-        avatarIds.set(jid, id);
-      }
-      return `<img class="${cls}" data-media="${id}" data-mime="${escapeHtml(mime)}" alt="">`;
-    }
+    const attrs = jid && blob ? src.attrs("avatars", jid, blob.type || "image/jpeg") : null;
+    if (attrs) return `<img class="${cls}" ${attrs} alt="">`;
     const initial = [...name.replace(/^[^\p{L}\p{N}]+/u, "")][0]?.toUpperCase() ?? "?";
     return `<span class="${cls} initial" style="background:${color}">${escapeHtml(initial)}</span>`;
   }
@@ -88,30 +163,38 @@ export function renderChatHtml(b: ExportBundle, o: HtmlOptions = {}): HtmlPart[]
   function mediaHtml(r: ExportRecord): string {
     const m = r.exportedMedia;
     if (!m || !r.media) return "";
-    const id = escapeHtml(mediaId(m.path, m.mime));
-    const mime = escapeHtml(m.mime);
-    const data = `data-media="${id}" data-mime="${mime}"`;
-    switch (r.media.kind) {
+    const kind = r.media.kind;
+    const dur = r.media.durationSec != null ? formatDuration(r.media.durationSec) : "";
+    if (kind === "document") {
+      const name = m.filename ?? m.path.split("/").pop()!;
+      const ext = name.match(/\.([A-Za-z0-9]{1,8})$/)?.[1]?.toUpperCase() ?? "FILE";
+      const inner =
+        `<span class="doc-ext">${escapeHtml(ext.slice(0, 4))}</span>` +
+        `<span class="doc-info"><span class="doc-name">${escapeHtml(name)}</span>` +
+        `<span class="doc-meta">${escapeHtml(ext)} · ${formatSize(m.size)}</span></span>`;
+      if (src.snapshot) return `<div class="doc">${inner}</div>`;
+      return `<a class="doc" ${src.attrs("media", m.path, m.mime)} download="${escapeHtml(name)}" title="Download">${inner}</a>`;
+    }
+    if (src.snapshot && (kind === "voice" || kind === "audio")) {
+      return `<div class="audio still"><span class="audio-icon">${KIND_ICONS[kind]}</span><span class="play-icon">▶</span>${waveHtml(r.id)}<span class="dur">${dur}</span></div>`;
+    }
+    if (src.snapshot && kind === "video") {
+      const poster = src.poster(m.path);
+      const still = poster ? `<img class="frame" src="${escapeHtml(poster)}" alt="">` : "";
+      return `<div class="video still">${still}<span class="play">▶</span>${dur ? `<span class="vdur">🎥 ${dur}</span>` : ""}</div>`;
+    }
+    const data = src.attrs("media", m.path, m.mime);
+    if (!data) return `<div class="missing">${KIND_ICONS[kind]} ${escapeHtml(mediaKindLabel(kind))}</div>`;
+    switch (kind) {
       case "image":
         return `<img class="photo" ${data} alt="Photo">`;
       case "sticker":
         return `<img class="sticker" ${data} alt="Sticker">`;
       case "video":
         return `<video class="video" controls preload="metadata" ${data}></video>`;
-      case "voice":
-      case "audio": {
-        const dur = r.media.durationSec != null ? `<span class="dur">${formatDuration(r.media.durationSec)}</span>` : "";
-        return `<div class="audio"><span class="audio-icon">${KIND_ICONS[r.media.kind]}</span><audio controls preload="metadata" ${data}></audio>${dur}</div>`;
-      }
-      case "document": {
-        const name = m.filename ?? m.path.split("/").pop()!;
-        const ext = name.match(/\.([A-Za-z0-9]{1,8})$/)?.[1]?.toUpperCase() ?? "FILE";
-        return (
-          `<a class="doc" ${data} download="${escapeHtml(name)}" title="Download">` +
-          `<span class="doc-ext">${escapeHtml(ext.slice(0, 4))}</span>` +
-          `<span class="doc-info"><span class="doc-name">${escapeHtml(name)}</span>` +
-          `<span class="doc-meta">${escapeHtml(ext)} · ${formatSize(m.size)}</span></span></a>`
-        );
+      default: {
+        const d = dur ? `<span class="dur">${dur}</span>` : "";
+        return `<div class="audio"><span class="audio-icon">${KIND_ICONS[kind]}</span><audio controls preload="metadata" ${data}></audio>${d}</div>`;
       }
     }
   }
@@ -167,76 +250,50 @@ export function renderChatHtml(b: ExportBundle, o: HtmlOptions = {}): HtmlPart[]
 
   const title = b.chat.name || "WhatsApp chat";
   const exported = `${new Date(b.exportedAt).toLocaleDateString(o.locale, { day: "numeric", month: "long", year: "numeric" })}, ${timeOf(Math.floor(b.exportedAt.getTime() / 1000))}`;
-
-  push(`<!doctype html>
-<html lang="${escapeHtml(o.locale ?? "en")}">
-<head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<meta http-equiv="Content-Security-Policy" content="default-src 'none'; img-src blob:; media-src blob:; style-src 'unsafe-inline'; script-src 'unsafe-inline'; base-uri 'none'; form-action 'none'">
-<meta name="generator" content="WA Export">
-<title>${escapeHtml(title)}</title>
-<style>${CSS}</style>
-</head>
-<body>
-<header class="top">
+  const button = src.snapshot ? "" : `\n  <button type="button" id="print" title="Opens the print dialog; choose “Save as PDF”">Save as PDF</button>`;
+  const header = `<header class="top">
   ${avatarHtml(b.chat.jid, b.chat.name || "?", "avatar", colorFor(title))}
-  <div class="who"><div class="chat-name">${escapeHtml(title)}</div><div class="sub">${plural(b.records.length, "message")} · exported ${escapeHtml(exported)}</div></div>
-  <button type="button" id="print" title="Opens the print dialog; choose “Save as PDF”">Save as PDF</button>
-</header>
-<main class="chat">
-`);
+  <div class="who"><div class="chat-name">${escapeHtml(title)}</div><div class="sub">${plural(b.records.length, "message")} · exported ${escapeHtml(exported)}</div></div>${button}
+</header>`;
 
+  const blocks: string[] = [];
   if (b.problems.length) {
     const items = problemLines(b).map((line) => `<li>${escapeHtml(line)}</li>`).join("");
-    push(`<section class="system problems"><strong>⚠️ Export problems</strong><ul>${items}</ul></section>\n`);
+    blocks.push(`<section class="system problems"><strong>⚠️ Export problems</strong><ul>${items}</ul></section>`);
   }
-
   let lastDay = "";
   let lastKey = "";
   for (const r of b.records) {
     const day = r.timestamp != null ? dayOf(r.timestamp) : lastDay;
     if (day && day !== lastDay) {
-      push(`<div class="day"><span>${escapeHtml(day)}</span></div>\n`);
+      blocks.push(`<div class="day"><span>${escapeHtml(day)}</span></div>`);
       lastDay = day;
       lastKey = "";
     }
     const key = senderKey(r);
-    push(messageHtml(r, key !== lastKey) + "\n");
+    blocks.push(messageHtml(r, key !== lastKey));
     lastKey = key;
   }
-
-  push(`<p class="end">Exported with WA Export. Only the selected messages are shown.</p>
-</main>
-<div id="lightbox" hidden><img alt=""></div>
-`);
-  parts.push(...media);
-  push(`<script>${SCRIPT}</script>
-</body>
-</html>
-`);
-  return parts;
+  return { title, header, blocks, end: `<p class="end">Exported with WA Export. Only the selected messages are shown.</p>` };
 }
 
-const CSS = `
-:root {
-  color-scheme: light dark;
+const LIGHT = `
   --bg: #efeae2; --panel: #f0f2f5; --in: #ffffff; --out: #d9fdd3; --text: #111b21; --muted: #667781;
   --chip: #ffffff; --chip-text: #54656f; --quote-in: #f5f6f6; --quote-out: #d1f4cc; --you: #06a884;
   --link: #027eb5; --system: #ffeecd; --system-text: #54656f; --shadow: 0 1px 0.5px rgba(11, 20, 26, .13);
   --accent: #008069; --accent-text: #fff; --code: rgba(11, 20, 26, .06);
-}
-@media (prefers-color-scheme: dark) {
-  :root {
-    --bg: #0b141a; --panel: #202c33; --in: #202c33; --out: #005c4b; --text: #e9edef; --muted: #8696a0;
-    --chip: #182229; --chip-text: #8696a0; --quote-in: #1d282f; --quote-out: #025144; --you: #06cf9c;
-    --link: #53bdeb; --system: #182229; --system-text: #ffd279; --shadow: 0 1px 0.5px rgba(11, 20, 26, .5);
-    --accent: #21c063; --accent-text: #0b141a; --code: rgba(255, 255, 255, .08);
-  }
-}
+`;
+const DARK = `
+  --bg: #0b141a; --panel: #202c33; --in: #202c33; --out: #005c4b; --text: #e9edef; --muted: #8696a0;
+  --chip: #182229; --chip-text: #8696a0; --quote-in: #1d282f; --quote-out: #025144; --you: #06cf9c;
+  --link: #53bdeb; --system: #182229; --system-text: #ffd279; --shadow: 0 1px 0.5px rgba(11, 20, 26, .5);
+  --accent: #21c063; --accent-text: #0b141a; --code: rgba(255, 255, 255, .08);
+`;
+
+const BASE = `
 * { box-sizing: border-box; }
 html, body { margin: 0; }
-body {
+body, .wa {
   background: var(--bg); color: var(--text);
   font: 14.2px/19px "Segoe UI", "Helvetica Neue", Helvetica, "Lucida Grande", Arial, Ubuntu, Cantarell, "Fira Sans", sans-serif;
   -webkit-font-smoothing: antialiased;
@@ -339,6 +396,35 @@ body {
   .row, .day, .system { break-inside: avoid; }
 }
 `;
+
+const CSS = `
+:root {
+  color-scheme: light dark;${LIGHT}}
+@media (prefers-color-scheme: dark) {
+  :root {${DARK}}
+}
+${BASE}`;
+
+// Snapshots (images, PDF): one fixed theme, a static header, and still versions of video and audio.
+const SNAPSHOT_CSS = `
+.wa .top { position: static; }
+.video.still { position: relative; display: block; width: 330px; max-width: 100%; aspect-ratio: 16 / 9; border-radius: 6px;
+  background: #0b141a; overflow: hidden; }
+.video.still .frame { display: block; width: 100%; height: 100%; object-fit: cover; }
+.video.still .play { position: absolute; left: 50%; top: 50%; width: 48px; height: 48px; margin: -24px 0 0 -24px; border-radius: 50%;
+  display: grid; place-items: center; background: rgba(11, 20, 26, .55); color: #fff; font-size: 20px; }
+.video.still .vdur { position: absolute; left: 8px; bottom: 6px; padding: 0 4px; border-radius: 4px; color: #fff; font-size: 11px;
+  background: rgba(11, 20, 26, .35); }
+.audio.still { min-width: 280px; padding: 6px 0; }
+.audio.still .play-icon { color: var(--muted); font-size: 18px; }
+.wave { display: flex; flex: 1; align-items: center; gap: 2px; height: 24px; }
+.wave i { display: block; width: 3px; border-radius: 2px; background: var(--muted); opacity: .7; }
+`;
+
+/** Styles for a snapshot root, `<div class="wa">`, in the given theme. */
+export function snapshotCss(dark: boolean): string {
+  return `.wa {${dark ? DARK : LIGHT}}\n${BASE}${SNAPSHOT_CSS}`;
+}
 
 // Decodes each media's base64 blocks into a Blob URL and gives it to the elements that show it.
 const SCRIPT = `
