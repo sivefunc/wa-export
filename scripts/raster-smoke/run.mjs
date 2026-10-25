@@ -35,6 +35,15 @@ const results = await page.evaluate(async (assets) => {
     for (let i = 0; i < bytes.length; i += 0x8000) bin += String.fromCharCode(...bytes.subarray(i, i + 0x8000));
     res[id] = { filename, type: blob.type, size: blob.size, ms: Math.round(performance.now() - t0), progress: seen.at(-1), b64: btoa(bin) };
   }
+  const wideChat = demoChatFrom(file);
+  wideChat.records[0] = { ...wideChat.records[0], text: "word ".repeat(400) };
+  const wideBlob = (await getWriter("png").write(wideChat, () => {}, { format: "png", order: "date", longImages: "single" })).blob;
+  const wh = new DataView(await wideBlob.slice(0, 24).arrayBuffer());
+  res.wide = { w: wh.getUint32(16), h: wh.getUint32(20) };
+  // Text XML can't carry (a control character, a lone surrogate) must not break the SVG render.
+  const odd = demoChatFrom(file);
+  odd.records[0] = { ...odd.records[0], text: "bad \u0001 chars \uD800 here" };
+  res.oddText = await getWriter("png").write(odd, () => {}, { format: "png", order: "date", longImages: "single" }).then((r) => r.blob.size, (e) => e.message);
   // A long chat: 1000 text messages are too tall for one image even at 1×.
   const long = demoChatFrom(file);
   const text = long.records.find((r) => !r.media && r.text);
@@ -57,11 +66,30 @@ const results = await page.evaluate(async (assets) => {
   res.split.b64 = btoa(zbin);
   return res;
 }, assets);
+// The same chat from a narrow window (tiling window managers): layout must not follow WhatsApp's viewport.
+const narrow = await browser.newPage({ viewport: { width: 500, height: 800 } });
+await narrow.setContent("<!doctype html><title>raster</title><body></body>");
+await narrow.addScriptTag({ content: output[0].code });
+const narrowPng = await narrow.evaluate(async (assets) => {
+  const { getWriter, demoChatFrom } = globalThis.__waRaster;
+  const file = (name, mime) => new Blob([Uint8Array.from(atob(assets[name]), (c) => c.charCodeAt(0))], { type: mime });
+  const long = demoChatFrom(file);
+  long.records[0] = { ...long.records[0], text: "word ".repeat(400) };
+  const { blob } = await getWriter("png").write(long, () => {}, { format: "png", order: "date", longImages: "single" });
+  const head = new DataView(await blob.slice(0, 24).arrayBuffer());
+  return { w: head.getUint32(16), h: head.getUint32(20) };
+}, assets);
 await browser.close();
 
 let failed = false;
 const SIGNATURES = { png: [0x89, 0x50, 0x4e, 0x47], jpeg: [0xff, 0xd8, 0xff], pdf: [0x25, 0x50, 0x44, 0x46] };
-const { tooLong, split, longPdf, ...formats } = results;
+const { tooLong, split, longPdf, oddText, wide, ...formats } = results;
+const sameSize = wide.w === narrowPng.w && wide.h === narrowPng.h;
+console.log(`narrow vs wide window: ${sameSize ? "ok" : "FAIL"} ${narrowPng.w}×${narrowPng.h} vs ${wide.w}×${wide.h}`);
+failed ||= !sameSize;
+const oddOk = typeof oddText === "number" && oddText > 20_000;
+console.log(`text XML can't carry: ${oddOk ? "ok" : "FAIL"} (${oddText})`);
+failed ||= !oddOk;
 const tooLongOk = /too long for one image/.test(tooLong);
 console.log(`long chat as one image: ${tooLongOk ? "ok, refused" : "FAIL"} (${tooLong})`);
 const zip = await JSZip.loadAsync(Buffer.from(split.b64, "base64"));

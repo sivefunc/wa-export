@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { blocksIn, chooseScale, paginate } from "../src/export/raster/plan";
+import { blocksIn, chooseScale, linesIn, paginate } from "../src/export/raster/plan";
 
 const blocks = (...hs: number[]) => {
   let y = 0;
@@ -64,5 +64,15 @@ describe("blocksIn", () => {
 
   it("includes a tall block cut by the slice", () => {
     expect(blocksIn([{ y: 0, h: 900 }], { y0: 300, y1: 600 })).toHaveLength(1);
+  });
+});
+
+describe("linesIn", () => {
+  const line = (y: number, h = 20) => ({ x: 0, y, w: 10, h, text: `at ${y}` });
+
+  it("gives each line to the page holding its middle, in page coordinates", () => {
+    const lines = [line(100), line(290), line(310)]; // middles 110, 300 (on the cut), 320
+    expect(linesIn(lines, { y0: 0, y1: 300 }).map((l) => [l.text, l.y])).toEqual([["at 100", 100]]);
+    expect(linesIn(lines, { y0: 300, y1: 600 }).map((l) => [l.text, l.y])).toEqual([["at 290", -10], ["at 310", 10]]);
   });
 });

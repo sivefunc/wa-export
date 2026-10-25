@@ -60,6 +60,15 @@ describe("buildPdf", () => {
     expect(pdf).toContain("<0001000200030001> Tj"); // the repeated "a" reuses its CID
   });
 
+  it("past 65535 distinct characters, the rest share one replacement code instead of overflowing", () => {
+    const many = Array.from({ length: 66000 }, (_, i) => String.fromCodePoint(0x4e00 + (i % 20000) + Math.floor(i / 20000) * 0x10000 + (i >= 20000 ? 0x10000 : 0))).join("");
+    const pdf = latin1(buildPdf([page([{ x: 0, y: 0, w: 10, h: 10, text: many }, { x: 0, y: 20, w: 10, h: 10, text: "AB" }])], A4));
+    const strings = [...pdf.matchAll(/<([0-9A-F]+)> Tj/g)].map((m) => m[1]);
+    expect(strings.every((h) => h.length % 4 === 0)).toBe(true);
+    expect(pdf).not.toMatch(/<1[0-9A-F]{4}> </);
+    expect(pdf).toMatch(/<FFFF> <FFFD>/);
+  });
+
   it("a page without text has no text block", () => {
     const pdf = latin1(buildPdf([page()], A4));
     expect(pdf).not.toContain("BT");

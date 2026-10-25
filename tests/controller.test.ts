@@ -73,6 +73,21 @@ describe("export controller", () => {
     expect(got).toEqual({ format: "zip", order: "date", longImages: "split" });
   });
 
+  it("problems a writer finds (a photo it can't draw) reach the summary", async () => {
+    const res = okResult();
+    const r = res.ok ? res.bundle.records[0] : null!;
+    const { c, last } = setup(res, async (b) => {
+      const problem = { messageId: r.id, code: "media_error" as const, detail: "couldn't be drawn in the image" };
+      b.records[0].media = { kind: "image", mime: "image/jpeg", filename: null, size: 1, durationSec: null };
+      b.records[0].problems.push(problem);
+      b.problems.push(problem);
+      return { blob: new Blob(["z"]), filename: "chat.png" };
+    });
+    c.selectionChanged({ active: true, ids: ["a"] });
+    await c.exportNow();
+    expect(last()).toMatchObject({ kind: "done", problems: [expect.stringContaining("Image could not be exported")] });
+  });
+
   it("passes the chosen writer's limits to collect", async () => {
     const { c, collected } = setup(okResult());
     c.selectionChanged({ active: true, ids: ["a"] });
