@@ -6,8 +6,8 @@ Guide for coding agents (Claude Code, Codex, Cursor, …) working on this repo. 
 ## What this is
 
 A WXT (MV3) browser extension for Chrome 111+ and Firefox 128+. In WhatsApp Web the user selects messages, clicks
-**Export**, and gets a file: a ZIP (`chat.md` + `messages.json` + `media/`) or a single HTML page that looks like
-WhatsApp. Everything runs locally.
+**Export**, and gets a file: a ZIP (`chat.md` + `messages.json` + `media/`), a single HTML page that looks like
+WhatsApp, or that same look as a searchable PDF or a PNG/JPEG image. Everything runs locally.
 
 ## Commands
 
@@ -17,6 +17,7 @@ pnpm typecheck
 pnpm build && pnpm zip   # the manifest/package tests read .output/, so build + zip before pnpm test
 pnpm test                # Vitest; TZ is pinned to Etc/GMT+6 in vitest.config.ts
 pnpm test:firefox        # headless Firefox smoke check (needs Firefox); run it when touching bridge, writers or saving
+pnpm test:chromium       # PNG/JPEG/PDF pipeline in Chromium (pnpm exec playwright install chromium first)
 ```
 
 A change is done when `pnpm typecheck && pnpm build && pnpm zip && pnpm test` passes, plus `pnpm test:firefox`
@@ -31,7 +32,8 @@ entrypoints/options/              settings page (format, ordering)
 src/page/      WhatsApp internals through WA-JS        ← volatile, breaks on WhatsApp updates
 src/dom/       WhatsApp markup; all selectors in selectors.ts ← volatile
 src/bridge/    postMessage RPC between the two worlds (channel wa-export:v1)
-src/export/    collect → order → write; renderers (chat.md, messages.json, HTML); writers/
+src/export/    collect → order → write; renderers (chat.md, messages.json, HTML/snapshot); writers/
+src/export/raster/  PNG/JPEG/PDF: offscreen layout, SVG foreignObject rasterizing, pagination, PDF writer
 src/ui/        Export button (Shadow DOM), states, controller
 tests/         one *.test.ts per module; fixtures/ holds fictional WhatsApp models
 scripts/live/  drive a real WhatsApp Web session over CDP (manual, needs a QR scan)

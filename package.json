@@ -17,6 +17,7 @@
     "typecheck": "tsc --noEmit",
     "sign:firefox": "scripts/sign-firefox.sh",
     "test:firefox": "node scripts/firefox-smoke/run.mjs",
+    "test:chromium": "node scripts/raster-smoke/run.mjs",
     "demo:assets": "node scripts/demo/make-assets.mjs",
     "demo": "node scripts/demo/render.mjs",
     "demo:banner": "node scripts/demo/banner.mjs"

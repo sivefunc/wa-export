@@ -51,6 +51,15 @@ Profile pictures are the small ones WhatsApp shows in chat lists: the chat's in 
 
 Download [docs/demo/bamboo-team.html](docs/demo/bamboo-team.html) and open it to try one.
 
+## PDF, PNG and JPEG
+
+The same WhatsApp look, as a file to share anywhere:
+
+- **PDF:** A4 pages cut between messages. The text is searchable and can be copied (an invisible text layer under each page image).
+- **PNG / JPEG:** one tall image of the selected messages, at 2× resolution. A chat too long for one image (roughly 150 messages and up) is refused unless ⚙ → **Long images** → **Split into parts** is on; then you get a ZIP of images cut between messages.
+
+Videos show their first frame and voice notes a drawn player; the files themselves are in the ZIP and HTML formats. The theme follows WhatsApp's (light or dark).
+
 Files are embedded as base64, so the page is about a third larger than the media. Exports over 200 MB ask first, and over 500 MB use ZIP instead.
 
 ## Install
