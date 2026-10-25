@@ -1,5 +1,7 @@
 # WA Export for WhatsApp Web
 
+![WA Export: an ASCII-shaded green chat bubble with an export arrow, next to the title](docs/images/banner.png)
+
 [![CI](https://github.com/sivefunc/wa-export/actions/workflows/ci.yml/badge.svg)](https://github.com/sivefunc/wa-export/actions/workflows/ci.yml)
 
 Select messages in WhatsApp Web the way you would to forward them, click **Export**, and get a ZIP with the conversation and every file. Made for dragging into Claude Code. Or get a single HTML page that looks like WhatsApp, to read, share or save as PDF.

@@ -7,6 +7,8 @@ Everything here is fictional and made for this project. No real chat, person, ph
 - `bamboo-team.html`: the "Bamboo team" chat (`scripts/demo/demo-chat.ts`) exported by the real HTML writer. `pnpm demo` regenerates it with `TZ=UTC` and `en-US`, plus `docs/images/html-export-*.png` (screenshots in headless Firefox).
 - `docs/images/whatsapp-menu-*.png`: WhatsApp Web in the live-testing browser. Every real message was hidden, and a fictional conversation with "Bao the Panda", built from these assets, was inserted before the capture.
 
+- `src/banner.html` → `docs/images/banner.png`: the README banner, an ASCII "shader" render of our own chat-bubble-with-export-arrow symbol (not WhatsApp's logo). The generator was written with OpenAI Codex and reviewed here; `pnpm demo:banner` re-renders it. It is deterministic and loads nothing.
+
 `tests/demo-assets.test.ts` checks the assets for metadata and exports the demo chat through the HTML writer.
 
 The drawings and media are part of wa-export and share its MIT license.
