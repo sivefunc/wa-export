@@ -6,6 +6,13 @@ Select messages in WhatsApp Web the way you would to forward them, click **Expor
 
 Chrome/Chromium 111+ and Firefox 128+. Everything runs locally; see [PRIVACY.md](PRIVACY.md).
 
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="docs/images/whatsapp-menu-dark.png">
+  <img alt="WhatsApp Web in Select messages mode, with four messages ticked, the Export 4 button next to Forward, and its settings menu open on Format: ZIP or HTML" src="docs/images/whatsapp-menu-light.png">
+</picture>
+
+<sub>A fictional chat, made for this screenshot. See [docs/demo](docs/demo/README.md).</sub>
+
 ## Use it
 
 1. Open a chat in WhatsApp Web → ⋮ → **Select messages**.
@@ -32,6 +39,15 @@ Click ⚙ next to **Export** (or open the extension's options) and set **Export 
 Profile pictures are the small ones WhatsApp shows in chat lists: the chat's in the header and, in groups, each sender's beside their messages. People without a picture, or who hide it from you, get their initial, as in WhatsApp.
 
 **Save as PDF** in the page's header opens the print dialog; choose "Save as PDF" there.
+
+<p align="center">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="docs/images/html-export-dark.png">
+    <img width="600" alt="The HTML export of a fictional group chat: bubbles, profile pictures, a photo, a sticker, a reply, a voice note, a PDF, a video and formatted text" src="docs/images/html-export-light.png">
+  </picture>
+</p>
+
+Download [docs/demo/bamboo-team.html](docs/demo/bamboo-team.html) and open it to try one.
 
 Files are embedded as base64, so the page is about a third larger than the media. Exports over 200 MB ask first, and over 500 MB use ZIP instead.
 
