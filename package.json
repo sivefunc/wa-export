@@ -16,7 +16,9 @@
     "postinstall": "wxt prepare",
     "typecheck": "tsc --noEmit",
     "sign:firefox": "scripts/sign-firefox.sh",
-    "test:firefox": "node scripts/firefox-smoke/run.mjs"
+    "test:firefox": "node scripts/firefox-smoke/run.mjs",
+    "demo:assets": "node scripts/demo/make-assets.mjs",
+    "demo": "node scripts/demo/render.mjs"
   },
   "dependencies": {
     "@wppconnect/wa-js": "4.7.2",

@@ -1,0 +1,19 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <!-- Bao waving with bamboo: demo sticker. Drawn for this project; MIT like the rest of the repo. -->
+  <g stroke="#fff" stroke-width="22" stroke-linejoin="round" paint-order="stroke">
+    <rect x="420" y="70" width="34" height="380" rx="14" fill="#5cbf4a"/>
+    <path d="M454 130q30-36 48-12-26 4-48 12z" fill="#7fd96b"/>
+    <circle cx="150" cy="140" r="56" fill="#1f1f1f"/>
+    <circle cx="330" cy="140" r="56" fill="#1f1f1f"/>
+    <ellipse cx="230" cy="270" rx="165" ry="155" fill="#fafafa"/>
+    <ellipse cx="420" cy="330" rx="40" ry="56" fill="#1f1f1f" transform="rotate(-20 420 330)"/>
+  </g>
+  <ellipse cx="180" cy="245" rx="44" ry="58" fill="#1f1f1f" transform="rotate(-25 180 245)"/>
+  <ellipse cx="300" cy="245" rx="44" ry="58" fill="#1f1f1f" transform="rotate(25 300 245)"/>
+  <circle cx="186" cy="238" r="17" fill="#fff"/>
+  <circle cx="294" cy="238" r="17" fill="#fff"/>
+  <ellipse cx="240" cy="318" rx="26" ry="18" fill="#1f1f1f"/>
+  <path d="M206 350q34 30 68 0" fill="none" stroke="#1f1f1f" stroke-width="10" stroke-linecap="round"/>
+  <ellipse cx="140" cy="320" rx="24" ry="14" fill="#ffb3b3" opacity=".75"/>
+  <ellipse cx="340" cy="320" rx="24" ry="14" fill="#ffb3b3" opacity=".75"/>
+</svg>
