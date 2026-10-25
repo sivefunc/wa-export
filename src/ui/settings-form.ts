@@ -1,6 +1,6 @@
 import { orderings } from "../export/orderings";
 import { writers } from "../export/writers";
-import type { Settings } from "../settings";
+import { longImageChoices, type Settings } from "../settings";
 
 const esc = (s: string) => s.replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c]!);
 
@@ -15,11 +15,12 @@ function selectHtml(name: keyof Settings, label: string, entries: { id: string; 
 export function settingsFieldsHtml(s: Settings): string {
   return (
     selectHtml("format", "Export format", Object.values(writers), s.format) +
-    selectHtml("order", "Message order", Object.values(orderings), s.order)
+    selectHtml("order", "Message order", Object.values(orderings), s.order) +
+    selectHtml("longImages", "Long images (PNG and JPEG)", Object.values(longImageChoices), s.longImages)
   );
 }
 
 export function readSettingsFields(root: ParentNode): Settings {
   const read = (name: keyof Settings) => root.querySelector<HTMLSelectElement>(`select[name="${name}"]`)!.value;
-  return { format: read("format"), order: read("order") };
+  return { format: read("format"), order: read("order"), longImages: read("longImages") as Settings["longImages"] };
 }

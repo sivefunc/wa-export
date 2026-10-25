@@ -33,7 +33,7 @@ const utf16Hex = (ch: string) => Array.from({ length: ch.length }, (_, i) => hex
  * ToUnicode CMap maps it back, so search and copy work for any script and emoji. Render mode 3 keeps it
  * invisible; the page image shows the real look.
  */
-export function buildPdf(pages: PdfPage[], g: PdfGeometry): Uint8Array {
+export function buildPdf(pages: PdfPage[], g: PdfGeometry): Uint8Array<ArrayBuffer> {
   const cids = new Map<string, number>();
   const cidOf = (ch: string) => {
     let cid = cids.get(ch);

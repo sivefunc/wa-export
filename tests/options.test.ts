@@ -15,7 +15,7 @@ const select = (name: string) => root().querySelector<HTMLSelectElement>(`select
 describe("options page", () => {
   it("renders a select per setting populated from the registries", async () => {
     await renderOptions(root());
-    expect([...select("format").options].map((o) => o.value)).toEqual(["zip", "html"]);
+    expect([...select("format").options].map((o) => o.value)).toEqual(["zip", "html", "pdf", "png", "jpeg"]);
     expect([...select("order").options].map((o) => o.value)).toEqual(["date"]);
     expect(root().textContent).toContain("Export format");
     expect(root().textContent).toContain("Message order");
@@ -33,8 +33,8 @@ describe("options page", () => {
     select("order").dispatchEvent(new Event("change", { bubbles: true }));
     await vi.waitFor(() => expect(root().querySelector("[role=status]")!.textContent).toBe("Saved"));
     // Written to storage, not just the fallback value.
-    expect(await fakeBrowser.storage.sync.get("settings")).toEqual({ settings: { format: "zip", order: "date" } });
-    expect(await settingsItem.getValue()).toEqual({ format: "zip", order: "date" });
+    expect(await fakeBrowser.storage.sync.get("settings")).toEqual({ settings: { format: "zip", order: "date", longImages: "single" } });
+    expect(await settingsItem.getValue()).toEqual({ format: "zip", order: "date", longImages: "single" });
     expect(root().querySelector("[role=status]")!.textContent).toBe("Saved");
   });
 });

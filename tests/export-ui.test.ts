@@ -1,5 +1,6 @@
 // @vitest-environment jsdom
 import { afterEach, describe, expect, it, vi } from "vitest";
+import type { Settings } from "../src/settings";
 import { mountExportUi } from "../src/ui/export-ui";
 import { findForwardButton } from "../src/ui/placement";
 
@@ -140,9 +141,9 @@ describe("mountExportUi", () => {
 
 describe("settings menu", () => {
   afterEach(() => vi.useRealTimers());
-  function setup(initial = { format: "zip", order: "date" }) {
-    const saved: { format: string; order: string }[] = [];
-    let current = { ...initial };
+  function setup(initial: Partial<Settings> = {}) {
+    const saved: Partial<Settings>[] = [];
+    let current: Settings = { format: "zip", order: "date", longImages: "single", ...initial };
     const ui = mountExportUi(document, {
       load: async () => ({ ...current }),
       save: async (s) => void saved.push((current = { ...s })),
@@ -196,8 +197,8 @@ describe("settings menu", () => {
     items()[0].click();
     expect(items()[0].getAttribute("aria-expanded")).toBe("true");
     const options = [...sub()!.querySelectorAll<HTMLElement>('[role="menuitemradio"]')];
-    expect(options.map((o) => o.querySelector(".text")!.textContent)).toEqual(["ZIP", "HTML"]);
-    expect(options.map((o) => o.getAttribute("aria-checked"))).toEqual(["false", "true"]);
+    expect(options.map((o) => o.querySelector(".text")!.textContent)).toEqual(["ZIP", "HTML", "PDF", "PNG", "JPEG"]);
+    expect(options.map((o) => o.getAttribute("aria-checked"))).toEqual(["false", "true", "false", "false", "false"]);
     expect(options[1].querySelector(".hint")!.textContent).toBeTruthy();
   });
 
@@ -244,7 +245,7 @@ describe("settings menu", () => {
     items()[0].click();
     sub()!.querySelectorAll<HTMLElement>('[role="menuitemradio"]')[1].click();
     await flush();
-    expect(saved).toEqual([{ format: "html", order: "date" }]);
+    expect(saved).toEqual([{ format: "html", order: "date", longImages: "single" }]);
     expect(menu()).toBeNull();
     expect(active()).toBe(gear());
   });
@@ -303,6 +304,22 @@ describe("settings menu", () => {
     expect(menu()).not.toBeNull();
   });
 
+  it("offers Long images only while the format is PNG or JPEG", async () => {
+    setup({ format: "zip" });
+    await open();
+    expect(items().map((i) => i.querySelector(".text")!.textContent)).toEqual(["Format", "Order"]);
+    gear().click();
+    await flush();
+    document.body.innerHTML = "";
+    setup({ format: "png", longImages: "split" });
+    await open();
+    expect(items().map((i) => [i.querySelector(".text")!.textContent, i.querySelector(".value")!.textContent])).toEqual([
+      ["Format", "PNG"],
+      ["Order", "Oldest first"],
+      ["Long images", "Split into parts"],
+    ]);
+  });
+
   it("without settings access there is no gear", () => {
     const ui = mountExportUi(document);
     ui.setState({ kind: "idle", count: 1 });
@@ -322,7 +339,7 @@ describe("settings menu motion", () => {
   function setup() {
     const ui = mountExportUi(
       document,
-      { load: async () => ({ format: "zip", order: "date" }), save: async () => {} },
+      { load: async () => ({ format: "zip", order: "date", longImages: "single" as const }), save: async () => {} },
       { motion: true },
     );
     ui.setState({ kind: "idle", count: 2 });
@@ -385,7 +402,7 @@ describe("settings menu motion", () => {
   });
 
   it("without motion nothing animates", async () => {
-    const ui = mountExportUi(document, { load: async () => ({ format: "zip", order: "date" }), save: async () => {} });
+    const ui = mountExportUi(document, { load: async () => ({ format: "zip", order: "date", longImages: "single" as const }), save: async () => {} });
     ui.setState({ kind: "idle", count: 1 });
     gear().click();
     await flush();

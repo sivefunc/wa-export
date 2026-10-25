@@ -1,18 +1,19 @@
 import { describe, expect, it } from "vitest";
 import type { CollectResult } from "../src/export/collect";
+import type { Writer } from "../src/export/writers";
 import { zipWriter } from "../src/export/writers/zip";
 import { createExportController } from "../src/ui/controller";
 import type { UiState } from "../src/ui/state";
 import { record } from "./fixtures/messages";
 
-function setup(result: CollectResult | (() => Promise<CollectResult>), write?: () => Promise<{ blob: Blob; filename: string }>) {
+function setup(result: CollectResult | (() => Promise<CollectResult>), write?: Writer["write"]) {
   const states: UiState[] = [];
   const saved: string[] = [];
   const collected: any[] = [];
   let confirmAnswer: ((ok: boolean) => void) | null = null;
   const c = createExportController({
     setState: (s) => states.push(s),
-    loadSettings: async () => ({ format: "zip", order: "date" }),
+    loadSettings: async () => ({ format: "zip", order: "date", longImages: "split" }),
     collect: async (o) => {
       collected.push(o);
       if (typeof result === "function") return result();
@@ -59,6 +60,17 @@ describe("export controller", () => {
     expect(states).toContainEqual({ kind: "working", stage: "writing", fileType: "ZIP", done: 50, total: 100 });
     expect(saved).toEqual(["chat.zip"]);
     expect(last()).toEqual({ kind: "done", messages: 2, problems: [] });
+  });
+
+  it("gives the writer the settings", async () => {
+    let got: unknown;
+    const { c } = setup(okResult(), async (_b, _p, settings) => {
+      got = settings;
+      return { blob: new Blob(["z"]), filename: "chat.png" };
+    });
+    c.selectionChanged({ active: true, ids: ["a"] });
+    await c.exportNow();
+    expect(got).toEqual({ format: "zip", order: "date", longImages: "split" });
   });
 
   it("passes the chosen writer's limits to collect", async () => {
@@ -131,7 +143,7 @@ describe("export controller", () => {
     let answer: boolean | null = null;
     const c = createExportController({
       setState: (s) => states.push(s),
-      loadSettings: async () => ({ format: "zip", order: "date" }),
+      loadSettings: async () => ({ format: "zip", order: "date", longImages: "split" }),
       collect: async (o) => {
         answer = await o.confirmLargeExport(600 * 1024 * 1024);
         return new Promise((r) => (resolveCollect = r));
