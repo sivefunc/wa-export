@@ -1,0 +1,42 @@
+// Pure layout decisions for image and PDF exports: where to cut, and how big a canvas may get.
+
+export interface Block {
+  y: number; // top, CSS px from the top of the page
+  h: number;
+}
+
+export interface Slice {
+  y0: number;
+  y1: number;
+}
+
+/**
+ * Cuts a laid-out page into slices of at most maxH, between blocks (messages, day chips) where possible.
+ * A block taller than a slice is cut at the slice edge.
+ */
+export function paginate(blocks: Block[], total: number, maxH: number): Slice[] {
+  const tops = blocks.map((b) => b.y).sort((a, b) => a - b);
+  const slices: Slice[] = [];
+  let y0 = 0;
+  while (y0 < total || slices.length === 0) {
+    const limit = y0 + maxH;
+    if (limit >= total) {
+      slices.push({ y0, y1: total });
+      break;
+    }
+    const cut = tops.filter((t) => t > y0 && t <= limit).pop() ?? limit;
+    slices.push({ y0, y1: cut });
+    y0 = cut;
+  }
+  return slices;
+}
+
+// Canvas limits that hold in current Chrome and Firefox.
+export const MAX_SIDE = 32000;
+export const MAX_AREA = 200_000_000;
+
+/** The largest scale up to `preferred` that keeps a w×h canvas within limits; null if even 1× doesn't fit. */
+export function chooseScale(w: number, h: number, preferred = 2): number | null {
+  const scale = Math.min(preferred, MAX_SIDE / Math.max(w, h), Math.sqrt(MAX_AREA / (w * h)));
+  return scale >= 1 ? Math.round(scale * 1e6) / 1e6 : null;
+}
