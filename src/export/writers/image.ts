@@ -3,7 +3,7 @@ import type { ExportBundle } from "../../types";
 import { exportFilename } from "../naming";
 import { canvasBlob, layOut, pageIsDark, prepareMedia, rasterize } from "../raster/dom";
 import { buildPdf, type PdfPage } from "../raster/pdf";
-import { chooseScale, linesIn, MAX_SIDE, paginate, QUALITY } from "../raster/plan";
+import { chooseScale, linesIn, MAX_SIDE, paginate, qualityPreset } from "../raster/plan";
 import type { Writer } from "./index";
 
 // Large media is read in full to draw it, like the HTML export.
@@ -43,7 +43,7 @@ function imageWriter(id: "png" | "jpeg"): Writer {
     wantsAvatars: true,
     async write(b, onProgress, settings) {
       const report = progress(onProgress);
-      const preset = QUALITY[settings?.quality ?? "best"];
+      const preset = qualityPreset(settings ?? { quality: "best", customQuality: 75 });
       const { doc, laid } = await snapshot(b, report);
       const name = exportFilename(b.chat.name, b.exportedAt, ext);
       const scale = chooseScale(laid.width, laid.height, preset.scale);
@@ -87,7 +87,7 @@ export const pdfWriter: Writer = {
   wantsAvatars: true,
   async write(b, onProgress, settings) {
     const report = progress(onProgress);
-    const preset = QUALITY[settings?.quality ?? "best"];
+    const preset = qualityPreset(settings ?? { quality: "best", customQuality: 75 });
     const { doc, laid } = await snapshot(b, report);
     const pageHeight = Math.round((laid.width * A4.heightPt) / A4.widthPt);
     const slices = paginate(laid.blocks, laid.height, pageHeight);

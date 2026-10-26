@@ -13,7 +13,7 @@ function setup(result: CollectResult | (() => Promise<CollectResult>), write?: W
   let confirmAnswer: ((ok: boolean) => void) | null = null;
   const c = createExportController({
     setState: (s) => states.push(s),
-    loadSettings: async () => ({ format: "zip", order: "date", longImages: "split", quality: "best" }),
+    loadSettings: async () => ({ format: "zip", order: "date", longImages: "split", quality: "best", customQuality: 75 }),
     collect: async (o) => {
       collected.push(o);
       if (typeof result === "function") return result();
@@ -70,7 +70,7 @@ describe("export controller", () => {
     });
     c.selectionChanged({ active: true, ids: ["a"] });
     await c.exportNow();
-    expect(got).toEqual({ format: "zip", order: "date", longImages: "split", quality: "best" });
+    expect(got).toEqual({ format: "zip", order: "date", longImages: "split", quality: "best", customQuality: 75 });
   });
 
   it("problems a writer finds (a photo it can't draw) reach the summary", async () => {
@@ -158,7 +158,7 @@ describe("export controller", () => {
     let answer: boolean | null = null;
     const c = createExportController({
       setState: (s) => states.push(s),
-      loadSettings: async () => ({ format: "zip", order: "date", longImages: "split", quality: "best" }),
+      loadSettings: async () => ({ format: "zip", order: "date", longImages: "split", quality: "best", customQuality: 75 }),
       collect: async (o) => {
         answer = await o.confirmLargeExport(600 * 1024 * 1024);
         return new Promise((r) => (resolveCollect = r));

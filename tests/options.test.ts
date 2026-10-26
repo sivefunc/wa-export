@@ -33,8 +33,8 @@ describe("options page", () => {
     select("order").dispatchEvent(new Event("change", { bubbles: true }));
     await vi.waitFor(() => expect(root().querySelector("[role=status]")!.textContent).toBe("Saved"));
     // Written to storage, not just the fallback value.
-    expect(await fakeBrowser.storage.sync.get("settings")).toEqual({ settings: { format: "zip", order: "date", longImages: "single", quality: "best" } });
-    expect(await settingsItem.getValue()).toEqual({ format: "zip", order: "date", longImages: "single", quality: "best" });
+    expect(await fakeBrowser.storage.sync.get("settings")).toEqual({ settings: { format: "zip", order: "date", longImages: "single", quality: "best", customQuality: 75 } });
+    expect(await settingsItem.getValue()).toEqual({ format: "zip", order: "date", longImages: "single", quality: "best", customQuality: 75 });
     expect(root().querySelector("[role=status]")!.textContent).toBe("Saved");
   });
 });
