@@ -30,7 +30,7 @@ Chrome/Chromium 111+ and Firefox 128+. Everything runs locally; see [PRIVACY.md]
 | **PDF** | The same look on A4 pages. Text can be searched and copied. |
 | **Image** | The same look as one PNG or JPEG. Long chats can be split into parts. |
 
-PDF and images have a **Quality** option (Best, Balanced, Small, or a Custom percentage) that trades sharpness for file size. Everything follows WhatsApp's light or dark theme.
+PDF and images have a **Quality** option (Best, Balanced, Small, or a Custom percentage) that trades sharpness for file size. A **Theme** option picks Light, Dark or Auto: images and PDF follow WhatsApp's theme, and the HTML follows the viewer's.
 
 <p align="center">
   <picture>

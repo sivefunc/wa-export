@@ -20,8 +20,8 @@ export const htmlWriter: Writer = {
   wantsAvatars: true,
   // Base64 adds a third, and the browser opening the page holds all of it in memory.
   limits: { warnBytes: 200 * 1024 * 1024, maxBytes: 500 * 1024 * 1024, hint: "Select fewer large files, or export as ZIP." },
-  async write(b, onProgress) {
-    const parts = renderChatHtml(b);
+  async write(b, onProgress, settings) {
+    const parts = renderChatHtml(b, { theme: settings?.theme });
     const blobOf = (p: Exclude<HtmlPart, string>) => (p.from === "media" ? b.media : b.avatars)?.get(p.key);
     const blobs = parts.flatMap((p) => (typeof p === "string" ? [] : (blobOf(p) ?? [])));
     const total = blobs.reduce((sum, blob) => sum + blob.size, 0);

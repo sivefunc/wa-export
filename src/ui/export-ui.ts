@@ -1,6 +1,6 @@
 import { orderings } from "../export/orderings";
 import { writers } from "../export/writers";
-import { CUSTOM_QUALITY, longImageChoices, qualityChoices, type Settings } from "../settings";
+import { CUSTOM_QUALITY, longImageChoices, qualityChoices, themeChoices, type Settings } from "../settings";
 import { findForwardButton, toolbarSlot } from "./placement";
 import { buttonLabel, progressFraction, type UiState } from "./state";
 
@@ -102,6 +102,7 @@ const ICONS = {
   order: "M3 18v-2h6v2H3Zm0-5v-2h12v2H3Zm0-5V6h18v2H3Z",
   image: "M5 21a2 2 0 0 1-2-2V5c0-1.1.9-2 2-2h14a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H5Zm1-4h12l-3.75-5-3 4L9 13l-3 4Z",
   quality: "M3 17v-2h4v2H3Zm0-4v-2h8v2H3Zm0-4V7h12v2H3Zm13 8.5L12.5 14l1.4-1.4 2.1 2.1 4.6-4.6L22 11.5l-6 6Z",
+  theme: "M12 22a10 10 0 1 1 0-20 10 10 0 0 1 0 20Zm1-2.07a8 8 0 0 0 0-15.86v15.86Z",
   caret: "M10 17V7l5 5-5 5Z",
   check: "M9.55 18 3.85 12.3l1.43-1.42 4.27 4.27 9.18-9.18 1.42 1.43L9.55 18Z",
 };
@@ -119,6 +120,7 @@ interface Choice {
 
 const IMAGE_FORMATS = new Set(["png", "jpeg"]);
 const RASTER_FORMATS = new Set(["pdf", "png", "jpeg"]);
+const LOOK_FORMATS = new Set(["html", "pdf", "png", "jpeg"]); // formats with the WhatsApp look
 
 const MENU: {
   name: SettingName;
@@ -130,6 +132,13 @@ const MENU: {
 }[] = [
   { name: "format", text: "Format", icon: "format", choices: () => Object.values(writers).map((w) => ({ id: w.id, text: w.fileType, hint: w.description })) },
   { name: "order", text: "Order", icon: "order", choices: () => Object.values(orderings).map((o) => ({ id: o.id, text: o.shortLabel, hint: o.label })) },
+  {
+    name: "theme",
+    text: "Theme",
+    icon: "theme",
+    choices: () => Object.values(themeChoices).map((c) => ({ id: c.id, text: c.shortLabel, hint: c.hint })),
+    when: (s) => LOOK_FORMATS.has(s.format),
+  },
   {
     name: "longImages",
     text: "Long images",

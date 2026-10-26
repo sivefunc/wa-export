@@ -50,6 +50,13 @@ describe("html writer", () => {
     expect(joined.equals(Buffer.from(bytes))).toBe(true);
   }, 20_000);
 
+  it("uses the theme from the settings", async () => {
+    const settings = { format: "html", order: "date", longImages: "single", quality: "best", customQuality: 75, theme: "dark" } as const;
+    const html = await (await getWriter("html").write(bundle(new Uint8Array([1])), undefined, settings)).blob.text();
+    expect(html).toContain("color-scheme: dark;");
+    expect(html).not.toContain("prefers-color-scheme");
+  });
+
   it("reports rising progress up to 100", async () => {
     const seen: number[] = [];
     await getWriter("html").write(bundle(new Uint8Array(10)), (pct) => seen.push(pct));

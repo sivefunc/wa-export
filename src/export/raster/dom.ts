@@ -84,6 +84,11 @@ export function pageIsDark(doc: Document): boolean {
   return !!view?.matchMedia?.("(prefers-color-scheme: dark)").matches;
 }
 
+/** The theme for a snapshot: the chosen one, or WhatsApp's when "auto". */
+export function useDarkTheme(doc: Document, theme: "auto" | "light" | "dark" | undefined): boolean {
+  return theme === "dark" || (theme !== "light" && pageIsDark(doc));
+}
+
 /** Photos, stickers and pictures at the size they are shown (2×), and video first frames. */
 export async function prepareMedia(doc: Document, b: ExportBundle, onStep: () => void) {
   const srcs = new Map<string, string>();

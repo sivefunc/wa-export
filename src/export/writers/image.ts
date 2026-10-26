@@ -1,7 +1,8 @@
 import JSZip from "jszip";
 import type { ExportBundle } from "../../types";
 import { exportFilename } from "../naming";
-import { canvasBlob, layOut, pageIsDark, prepareMedia, rasterize } from "../raster/dom";
+import type { Settings } from "../../settings";
+import { canvasBlob, layOut, prepareMedia, rasterize, useDarkTheme } from "../raster/dom";
 import { buildPdf, type PdfPage } from "../raster/pdf";
 import { chooseScale, linesIn, MAX_SIDE, paginate, qualityPreset } from "../raster/plan";
 import type { Writer } from "./index";
@@ -10,13 +11,13 @@ import type { Writer } from "./index";
 const LIMITS = { warnBytes: 200 * 1024 * 1024, maxBytes: 500 * 1024 * 1024, hint: "Select fewer large files, or export as ZIP." };
 
 /** Media, layout: the shared first ~40% of the progress bar. */
-async function snapshot(b: ExportBundle, report: (pct: number) => void) {
+async function snapshot(b: ExportBundle, report: (pct: number) => void, settings?: Settings) {
   const doc = document;
   const steps = Math.max(1, b.records.filter((r) => r.exportedMedia).length);
   let done = 0;
   report(0);
   const media = await prepareMedia(doc, b, () => report(Math.floor((++done / steps) * 30)));
-  const laid = await layOut(doc, b, media, pageIsDark(doc));
+  const laid = await layOut(doc, b, media, useDarkTheme(doc, settings?.theme));
   report(40);
   return { doc, laid };
 }
@@ -44,7 +45,7 @@ function imageWriter(id: "png" | "jpeg"): Writer {
     async write(b, onProgress, settings) {
       const report = progress(onProgress);
       const preset = qualityPreset(settings ?? { quality: "best", customQuality: 75 });
-      const { doc, laid } = await snapshot(b, report);
+      const { doc, laid } = await snapshot(b, report, settings);
       const name = exportFilename(b.chat.name, b.exportedAt, ext);
       const scale = chooseScale(laid.width, laid.height, preset.scale);
       if (scale) {
@@ -88,7 +89,7 @@ export const pdfWriter: Writer = {
   async write(b, onProgress, settings) {
     const report = progress(onProgress);
     const preset = qualityPreset(settings ?? { quality: "best", customQuality: 75 });
-    const { doc, laid } = await snapshot(b, report);
+    const { doc, laid } = await snapshot(b, report, settings);
     const pageHeight = Math.round((laid.width * A4.heightPt) / A4.widthPt);
     const slices = paginate(laid.blocks, laid.height, pageHeight);
     const pages: PdfPage[] = [];

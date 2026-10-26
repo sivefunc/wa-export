@@ -36,22 +36,30 @@ describe("settings", () => {
   beforeEach(() => fakeBrowser.reset());
 
   it("defaults to zip ordered by date", async () => {
-    expect(DEFAULT_SETTINGS).toEqual({ format: "zip", order: "date", longImages: "single", quality: "best", customQuality: 75 });
-    expect(await loadSettings()).toEqual({ format: "zip", order: "date", longImages: "single", quality: "best", customQuality: 75 });
+    expect(DEFAULT_SETTINGS).toEqual({ format: "zip", order: "date", longImages: "single", quality: "best", customQuality: 75, theme: "auto" });
+    expect(await loadSettings()).toEqual({ format: "zip", order: "date", longImages: "single", quality: "best", customQuality: 75, theme: "auto" });
   });
 
   it("loadSettings replaces unknown ids with defaults", async () => {
     await settingsItem.setValue({ format: "tar-someday", order: "by-mood", longImages: "sideways" } as any);
-    expect(await loadSettings()).toEqual({ format: "zip", order: "date", longImages: "single", quality: "best", customQuality: 75 });
+    expect(await loadSettings()).toEqual({ format: "zip", order: "date", longImages: "single", quality: "best", customQuality: 75, theme: "auto" });
   });
 
   it("keeps a valid long-images choice, and settings saved before it existed get the default", async () => {
-    await settingsItem.setValue({ format: "png", order: "date", longImages: "split", quality: "small", customQuality: 40 });
-    expect(await loadSettings()).toEqual({ format: "png", order: "date", longImages: "split", quality: "small", customQuality: 40 });
+    await settingsItem.setValue({ format: "png", order: "date", longImages: "split", quality: "small", customQuality: 40, theme: "dark" });
+    expect(await loadSettings()).toEqual({ format: "png", order: "date", longImages: "split", quality: "small", customQuality: 40, theme: "dark" });
     await settingsItem.setValue({ format: "png", order: "date" } as any);
     expect((await loadSettings()).longImages).toBe("single");
     expect((await loadSettings()).quality).toBe("best");
     expect((await loadSettings()).customQuality).toBe(75);
+    expect((await loadSettings()).theme).toBe("auto");
+  });
+
+  it("keeps a valid theme and replaces an unknown one", async () => {
+    await settingsItem.setValue({ format: "html", order: "date", longImages: "single", quality: "best", customQuality: 75, theme: "light" });
+    expect((await loadSettings()).theme).toBe("light");
+    await settingsItem.setValue({ format: "html", order: "date", longImages: "single", quality: "best", customQuality: 75, theme: "sepia" } as any);
+    expect((await loadSettings()).theme).toBe("auto");
   });
 
   it("keeps a custom quality between 10 and 100 percent, as a whole number", async () => {

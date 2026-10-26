@@ -9,6 +9,7 @@ export type HtmlPart = string | { from: "media" | "avatars"; key: string; id: st
 
 export interface HtmlOptions {
   locale?: string; // dates and times; undefined = the browser's
+  theme?: "auto" | "light" | "dark"; // auto: the viewer's system setting
 }
 
 /**
@@ -98,7 +99,7 @@ export function renderChatHtml(b: ExportBundle, o: HtmlOptions = {}): HtmlPart[]
 <meta http-equiv="Content-Security-Policy" content="default-src 'none'; img-src blob:; media-src blob:; style-src 'unsafe-inline'; script-src 'unsafe-inline'; base-uri 'none'; form-action 'none'">
 <meta name="generator" content="WA Export">
 <title>${escapeHtml(pieces.title)}</title>
-<style>${CSS}</style>
+<style>${pageCss(o.theme)}</style>
 </head>
 <body>
 ${pieces.header}
@@ -402,14 +403,22 @@ body, .wa {
 }
 `;
 
-const CSS = `
+const RESPONSIVE = `@media (max-width: 600px) { .msg { max-width: 85%; } .chat { padding: 8px 10px 18px; } }`;
+
+/** The HTML page's styles: the viewer's light/dark setting, or one fixed theme. */
+function pageCss(theme: HtmlOptions["theme"] = "auto"): string {
+  if (theme === "light" || theme === "dark") {
+    return `\n:root {\n  color-scheme: ${theme};${theme === "dark" ? DARK : LIGHT}}\n${BASE}\n${RESPONSIVE}`;
+  }
+  return `
 :root {
   color-scheme: light dark;${LIGHT}}
 @media (prefers-color-scheme: dark) {
   :root {${DARK}}
 }
 ${BASE}
-@media (max-width: 600px) { .msg { max-width: 85%; } .chat { padding: 8px 10px 18px; } }`;
+${RESPONSIVE}`;
+}
 
 // Snapshots (images, PDF): one fixed theme, a static header, and still versions of video and audio.
 // No viewport-dependent rules: the offscreen layout and the SVG render must agree whatever WhatsApp's window size.
