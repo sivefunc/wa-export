@@ -1,0 +1,57 @@
+# yaml-language-server: $schema=https://coderabbit.ai/integrations/schema.v2.json
+# CodeRabbit reviews pull requests (free for public repos). AGENTS.md holds the rules it should check.
+language: en-US
+tone_instructions: "Be direct and concise. Flag real bugs and rule breaks; skip style nits."
+
+reviews:
+  profile: chill
+  high_level_summary: true
+  poem: false
+  in_progress_fortune: false
+  sequence_diagrams: false
+  suggested_reviewers: false
+  auto_review:
+    enabled: true
+    drafts: false
+    base_branches:
+      - main
+  path_filters:
+    - "!pnpm-lock.yaml"
+    - "!docs/demo/assets/**"
+    - "!docs/images/**"
+  path_instructions:
+    - path: "**/*"
+      instructions: |
+        Follow AGENTS.md. Its hard rules: the extension is read-only (never send, forward, delete, react,
+        mark read, scroll or load history); keep the guard that blocks WhatsApp's media re-upload request;
+        view-once stays skipped; no network beyond WhatsApp's own servers, no remote code, no analytics;
+        every per-message or per-file failure reaches the UI summary and every export format.
+        The repo is public: flag any real chat content, phone numbers, WhatsApp IDs (…@c.us, …@lid),
+        real names, personal paths, locations or time zones. Fictional values like +1 555-0100 and
+        123@c.us are fine.
+    - path: "src/{page,dom}/**"
+      instructions: |
+        This code depends on WhatsApp Web internals and markup, which change without notice. Selectors
+        belong in src/dom/selectors.ts. Check failures are reported, not swallowed.
+    - path: "src/export/raster/**"
+      instructions: |
+        The SVG foreignObject must load as a data: URL (a blob: URL taints the canvas in Chrome).
+        Watch canvas size limits, leaked object URLs and bitmaps, and PDF structure validity.
+    - path: "tests/**"
+      instructions: |
+        Tests use fictional data only and TZ Etc/GMT+6. jsdom tests start with
+        // @vitest-environment jsdom.
+    - path: "package.json"
+      instructions: "Dependencies are pinned to exact versions (no ^ or ~)."
+  tools:
+    gitleaks:
+      enabled: true
+    actionlint:
+      enabled: true
+    shellcheck:
+      enabled: true
+    markdownlint:
+      enabled: true
+
+chat:
+  auto_reply: true
