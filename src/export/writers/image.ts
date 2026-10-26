@@ -3,7 +3,7 @@ import type { ExportBundle } from "../../types";
 import { exportFilename } from "../naming";
 import { canvasBlob, layOut, pageIsDark, prepareMedia, rasterize } from "../raster/dom";
 import { buildPdf, type PdfPage } from "../raster/pdf";
-import { chooseScale, linesIn, MAX_SIDE, paginate } from "../raster/plan";
+import { chooseScale, linesIn, MAX_SIDE, paginate, QUALITY } from "../raster/plan";
 import type { Writer } from "./index";
 
 // Large media is read in full to draw it, like the HTML export.
@@ -43,24 +43,25 @@ function imageWriter(id: "png" | "jpeg"): Writer {
     wantsAvatars: true,
     async write(b, onProgress, settings) {
       const report = progress(onProgress);
+      const preset = QUALITY[settings?.quality ?? "best"];
       const { doc, laid } = await snapshot(b, report);
       const name = exportFilename(b.chat.name, b.exportedAt, ext);
-      const scale = chooseScale(laid.width, laid.height);
+      const scale = chooseScale(laid.width, laid.height, preset.scale);
       if (scale) {
         const canvas = await rasterize(doc, laid, { y0: 0, y1: laid.height }, scale);
         report(90);
-        const blob = await canvasBlob(canvas, type);
+        const blob = await canvasBlob(canvas, type, preset.jpeg);
         report(100);
         return { blob, filename: name };
       }
       if (settings?.longImages !== "split") throw new Error(TOO_LONG);
-      // Parts at 2×, each within the canvas limit, cut between messages.
-      const slices = paginate(laid.blocks, laid.height, Math.floor(MAX_SIDE / 2));
+      // Parts at the preset's scale, each within the canvas limit, cut between messages.
+      const slices = paginate(laid.blocks, laid.height, Math.floor(MAX_SIDE / preset.scale));
       const zip = new JSZip();
       const width = String(slices.length).length;
       for (const [i, s] of slices.entries()) {
-        const canvas = await rasterize(doc, laid, s, 2);
-        const blob = await canvasBlob(canvas, type);
+        const canvas = await rasterize(doc, laid, s, preset.scale);
+        const blob = await canvasBlob(canvas, type, preset.jpeg);
         zip.file(name.replace(/\.\w+$/, `-${String(i + 1).padStart(width, "0")}.${ext}`), new Uint8Array(await blob.arrayBuffer()), { compression: "STORE" });
         report(40 + Math.floor(((i + 1) / slices.length) * 55));
       }
@@ -84,15 +85,16 @@ export const pdfWriter: Writer = {
   description: "A4 pages; text can be searched and copied",
   limits: LIMITS,
   wantsAvatars: true,
-  async write(b, onProgress) {
+  async write(b, onProgress, settings) {
     const report = progress(onProgress);
+    const preset = QUALITY[settings?.quality ?? "best"];
     const { doc, laid } = await snapshot(b, report);
     const pageHeight = Math.round((laid.width * A4.heightPt) / A4.widthPt);
     const slices = paginate(laid.blocks, laid.height, pageHeight);
     const pages: PdfPage[] = [];
     for (const [i, s] of slices.entries()) {
-      const canvas = await rasterize(doc, laid, s, 2, pageHeight);
-      const jpeg = new Uint8Array(await (await canvasBlob(canvas, "image/jpeg", 0.88)).arrayBuffer());
+      const canvas = await rasterize(doc, laid, s, preset.scale, pageHeight);
+      const jpeg = new Uint8Array(await (await canvasBlob(canvas, "image/jpeg", preset.jpeg)).arrayBuffer());
       const lines = linesIn(laid.lines, s);
       pages.push({ jpeg, pixelWidth: canvas.width, pixelHeight: canvas.height, lines });
       report(40 + Math.floor(((i + 1) / slices.length) * 55));

@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "type": "module",
-  "description": "Export selected WhatsApp Web messages and media to a ZIP, locally.",
+  "description": "Export selected WhatsApp Web messages to ZIP, HTML, PDF or images, locally. For people and coding agents.",
   "engines": {
     "node": ">=22.12"
   },

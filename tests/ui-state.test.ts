@@ -36,19 +36,20 @@ describe("settings", () => {
   beforeEach(() => fakeBrowser.reset());
 
   it("defaults to zip ordered by date", async () => {
-    expect(DEFAULT_SETTINGS).toEqual({ format: "zip", order: "date", longImages: "single" });
-    expect(await loadSettings()).toEqual({ format: "zip", order: "date", longImages: "single" });
+    expect(DEFAULT_SETTINGS).toEqual({ format: "zip", order: "date", longImages: "single", quality: "best" });
+    expect(await loadSettings()).toEqual({ format: "zip", order: "date", longImages: "single", quality: "best" });
   });
 
   it("loadSettings replaces unknown ids with defaults", async () => {
     await settingsItem.setValue({ format: "tar-someday", order: "by-mood", longImages: "sideways" } as any);
-    expect(await loadSettings()).toEqual({ format: "zip", order: "date", longImages: "single" });
+    expect(await loadSettings()).toEqual({ format: "zip", order: "date", longImages: "single", quality: "best" });
   });
 
   it("keeps a valid long-images choice, and settings saved before it existed get the default", async () => {
-    await settingsItem.setValue({ format: "png", order: "date", longImages: "split" });
-    expect(await loadSettings()).toEqual({ format: "png", order: "date", longImages: "split" });
+    await settingsItem.setValue({ format: "png", order: "date", longImages: "split", quality: "small" });
+    expect(await loadSettings()).toEqual({ format: "png", order: "date", longImages: "split", quality: "small" });
     await settingsItem.setValue({ format: "png", order: "date" } as any);
     expect((await loadSettings()).longImages).toBe("single");
+    expect((await loadSettings()).quality).toBe("best");
   });
 });

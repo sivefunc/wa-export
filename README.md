@@ -4,13 +4,13 @@
 
 [![CI](https://github.com/sivefunc/wa-export/actions/workflows/ci.yml/badge.svg)](https://github.com/sivefunc/wa-export/actions/workflows/ci.yml)
 
-Select messages in WhatsApp Web the way you would to forward them, click **Export**, and get a ZIP with the conversation and every file. Made for dragging into Claude Code. Or get a single HTML page that looks like WhatsApp, to read, share or save as PDF.
+Select messages in WhatsApp Web the way you would to forward them, click **Export**, and save them as a **ZIP**, an **HTML** page, a **PDF** or an **image**. For sharing a conversation with people, or handing it to a coding agent.
 
 Chrome/Chromium 111+ and Firefox 128+. Everything runs locally; see [PRIVACY.md](PRIVACY.md).
 
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="docs/images/whatsapp-menu-dark.png">
-  <img alt="WhatsApp Web in Select messages mode, with four messages ticked, the Export 4 button next to Forward, and its settings menu open on Format: ZIP or HTML" src="docs/images/whatsapp-menu-light.png">
+  <img alt="WhatsApp Web in Select messages mode, with four messages ticked, the Export 4 button next to Forward, and its settings menu open on Format" src="docs/images/whatsapp-menu-light.png">
 </picture>
 
 <sub>A fictional chat, made for this screenshot. See [docs/demo](docs/demo/README.md).</sub>
@@ -19,48 +19,46 @@ Chrome/Chromium 111+ and Firefox 128+. Everything runs locally; see [PRIVACY.md]
 
 1. Open a chat in WhatsApp Web → ⋮ → **Select messages**.
 2. Tick the messages you want. Scrolling is fine; ticks out of view are kept.
-3. Click **Export N**, next to Forward in the selection toolbar. The ⚙ beside it opens a menu, styled like WhatsApp's own, to pick the format (ZIP or HTML) and the message order; it's the same setting as the extension's options page.
-4. Drag the downloaded ZIP into Claude Code.
+3. Click **Export N**, next to Forward in the selection toolbar. The ⚙ beside it picks the format and its options (the same settings as the extension's options page).
 
-## What's in the ZIP
+## Exports
 
-```
-<chat>-<YYYY-MM-DD-HHmm>.zip
-├── chat.md        conversation in date order: sender, time, replies, formatting as Markdown,
-│                  files linked where they were sent, problems marked where they happened
-├── messages.json  the same data, structured (schemaVersion 1)
-└── media/         original files: photos, videos, voice notes, PDFs, documents
-```
+| Format | What you get |
+|---|---|
+| **ZIP** | `chat.md` (the conversation as Markdown), `messages.json` (the same, structured) and `media/` with every original file. Made for coding agents and scripts. |
+| **HTML** | One page that looks like WhatsApp, opening in any browser: photos, stickers, voice notes and videos that play, documents to download. |
+| **PDF** | The same look on A4 pages. Text can be searched and copied. |
+| **Image** | The same look as one PNG or JPEG. Long chats can be split into parts. |
 
-Albums export every photo. A reply to a file keeps the reply text plus a mention such as `_(Video)_`; the quoted file itself is only included if you select it too.
-
-## HTML (WhatsApp look)
-
-Click ⚙ next to **Export** (or open the extension's options) and set **Export format** to **HTML (WhatsApp look)**. Export then downloads one `.html` file that opens in any browser and shows the selected messages as WhatsApp Web does: bubbles, profile pictures, sender names, replies, formatting, day separators, light and dark themes. Photos and stickers are shown inline, voice notes and videos play, and documents download from their card. Everything is inside the file; it loads nothing from the network.
-
-Profile pictures are the small ones WhatsApp shows in chat lists: the chat's in the header and, in groups, each sender's beside their messages. People without a picture, or who hide it from you, get their initial, as in WhatsApp.
-
-**Save as PDF** in the page's header opens the print dialog; choose "Save as PDF" there.
+PDF and images have a **Quality** option (Best, Balanced, Small) that trades sharpness for file size. Everything follows WhatsApp's light or dark theme.
 
 <p align="center">
   <picture>
     <source media="(prefers-color-scheme: dark)" srcset="docs/images/html-export-dark.png">
-    <img width="600" alt="The HTML export of a fictional group chat: bubbles, profile pictures, a photo, a sticker, a reply, a voice note, a PDF, a video and formatted text" src="docs/images/html-export-light.png">
+    <img width="600" alt="An export of a fictional group chat in the WhatsApp look: bubbles, profile pictures, a photo, a sticker, a reply, a voice note, a PDF, a video and formatted text" src="docs/images/html-export-light.png">
   </picture>
 </p>
 
-Download [docs/demo/bamboo-team.html](docs/demo/bamboo-team.html) and open it to try one.
+Try one: download [docs/demo/bamboo-team.html](docs/demo/bamboo-team.html).
 
-## PDF, PNG and JPEG
+<details>
+<summary>Details</summary>
 
-The same WhatsApp look, as a file to share anywhere:
+- **ZIP layout:**
+  ```
+  <chat>-<YYYY-MM-DD-HHmm>.zip
+  ├── chat.md        sender, time, replies, formatting as Markdown; files linked where they were sent;
+  │                  problems marked where they happened
+  ├── messages.json  the same data, structured (schemaVersion 1)
+  └── media/         original photos, videos, voice notes, PDFs, documents
+  ```
+- **Albums** export every photo. A reply to a file keeps the reply text plus a mention such as `_(Video)_`; the quoted file itself is only included if you select it too.
+- **Profile pictures** (HTML, PDF, image) are the small ones WhatsApp shows in chat lists. People without one, or who hide it from you, get their initial.
+- **HTML** embeds files as base64, about a third larger than the media. Its **Save as PDF** button opens the print dialog.
+- **PDF and images** show a video's first frame and a drawn voice-note player; the files themselves come with ZIP and HTML. A chat too long for one image (roughly 150 messages and up) is refused unless ⚙ → **Long images** → **Split into parts** is on, which gives a ZIP of images cut between messages.
+- **Size:** HTML, PDF and images ask before exporting over 200 MB of media and refuse over 500 MB; ZIP asks over 500 MB and refuses over 1.5 GB.
 
-- **PDF:** A4 pages cut between messages. The text is searchable and can be copied (an invisible text layer under each page image).
-- **PNG / JPEG:** one tall image of the selected messages, at 2× resolution. A chat too long for one image (roughly 150 messages and up) is refused unless ⚙ → **Long images** → **Split into parts** is on; then you get a ZIP of images cut between messages.
-
-Videos show their first frame and voice notes a drawn player; the files themselves are in the ZIP and HTML formats. The theme follows WhatsApp's (light or dark).
-
-Files are embedded as base64, so the page is about a third larger than the media. Exports over 200 MB ask first, and over 500 MB use ZIP instead.
+</details>
 
 ## Install
 

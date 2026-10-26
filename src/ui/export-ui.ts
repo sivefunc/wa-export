@@ -1,6 +1,6 @@
 import { orderings } from "../export/orderings";
 import { writers } from "../export/writers";
-import { longImageChoices, type Settings } from "../settings";
+import { longImageChoices, qualityChoices, type Settings } from "../settings";
 import { findForwardButton, toolbarSlot } from "./placement";
 import { buttonLabel, progressFraction, type UiState } from "./state";
 
@@ -98,6 +98,7 @@ const ICONS = {
   format: "M8 18h8v-2H8v2Zm0-4h8v-2H8v2Zm-2 8a2 2 0 0 1-2-2V4c0-1.1.9-2 2-2h8l6 6v12a2 2 0 0 1-2 2H6Zm7-13V4H6v16h12V9h-5Z",
   order: "M3 18v-2h6v2H3Zm0-5v-2h12v2H3Zm0-5V6h18v2H3Z",
   image: "M5 21a2 2 0 0 1-2-2V5c0-1.1.9-2 2-2h14a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H5Zm1-4h12l-3.75-5-3 4L9 13l-3 4Z",
+  quality: "M3 17v-2h4v2H3Zm0-4v-2h8v2H3Zm0-4V7h12v2H3Zm13 8.5L12.5 14l1.4-1.4 2.1 2.1 4.6-4.6L22 11.5l-6 6Z",
   caret: "M10 17V7l5 5-5 5Z",
   check: "M9.55 18 3.85 12.3l1.43-1.42 4.27 4.27 9.18-9.18 1.42 1.43L9.55 18Z",
 };
@@ -114,6 +115,7 @@ interface Choice {
 }
 
 const IMAGE_FORMATS = new Set(["png", "jpeg"]);
+const RASTER_FORMATS = new Set(["pdf", "png", "jpeg"]);
 
 const MENU: { name: SettingName; text: string; icon: keyof typeof ICONS; choices: () => Choice[]; when?: (s: Settings) => boolean }[] = [
   { name: "format", text: "Format", icon: "format", choices: () => Object.values(writers).map((w) => ({ id: w.id, text: w.fileType, hint: w.description })) },
@@ -124,6 +126,13 @@ const MENU: { name: SettingName; text: string; icon: keyof typeof ICONS; choices
     icon: "image",
     choices: () => Object.values(longImageChoices).map((c) => ({ id: c.id, text: c.shortLabel, hint: c.hint })),
     when: (s) => IMAGE_FORMATS.has(s.format),
+  },
+  {
+    name: "quality",
+    text: "Quality",
+    icon: "quality",
+    choices: () => Object.values(qualityChoices).map((c) => ({ id: c.id, text: c.shortLabel, hint: c.hint })),
+    when: (s) => RASTER_FORMATS.has(s.format),
   },
 ];
 
@@ -272,10 +281,14 @@ export function mountExportUi(doc: Document, settingsAccess?: SettingsAccess, op
     draw();
     focus(`[data-sub="${name}"]`);
   }
+  // Like WhatsApp's option lists: choosing moves the check and keeps the menu open; items that depend on
+  // the format (Long images, Quality) appear or go right away.
   async function choose(name: SettingName, value: string) {
     if (!isOpen() || !settingsAccess) return;
     const next = { ...menu!.settings, [name]: value };
-    closeMenu();
+    menu = { ...menu!, settings: next };
+    draw();
+    focus(`.submenu [data-value="${CSS.escape(value)}"]`);
     await settingsAccess.save(next);
   }
 

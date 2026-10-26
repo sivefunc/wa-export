@@ -1,6 +1,6 @@
 import { orderings } from "../export/orderings";
 import { writers } from "../export/writers";
-import { longImageChoices, type Settings } from "../settings";
+import { longImageChoices, qualityChoices, type Settings } from "../settings";
 
 const esc = (s: string) => s.replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c]!);
 
@@ -16,11 +16,17 @@ export function settingsFieldsHtml(s: Settings): string {
   return (
     selectHtml("format", "Export format", Object.values(writers), s.format) +
     selectHtml("order", "Message order", Object.values(orderings), s.order) +
-    selectHtml("longImages", "Long images (PNG and JPEG)", Object.values(longImageChoices), s.longImages)
+    selectHtml("longImages", "Long images (PNG and JPEG)", Object.values(longImageChoices), s.longImages) +
+    selectHtml("quality", "Quality (PDF, PNG and JPEG)", Object.values(qualityChoices), s.quality)
   );
 }
 
 export function readSettingsFields(root: ParentNode): Settings {
   const read = (name: keyof Settings) => root.querySelector<HTMLSelectElement>(`select[name="${name}"]`)!.value;
-  return { format: read("format"), order: read("order"), longImages: read("longImages") as Settings["longImages"] };
+  return {
+    format: read("format"),
+    order: read("order"),
+    longImages: read("longImages") as Settings["longImages"],
+    quality: read("quality") as Settings["quality"],
+  };
 }
