@@ -12,7 +12,16 @@ export interface Settings {
   longImages: LongImages; // PNG/JPEG: one whole image, or parts in a ZIP when too long for one
   quality: Quality; // PDF/PNG/JPEG: resolution and JPEG compression
   customQuality: number; // percent, 10–100, used when quality is "custom"
+  theme: Theme; // HTML/PDF/images: light, dark, or auto
 }
+
+export type Theme = "auto" | "light" | "dark";
+
+export const themeChoices: Record<Theme, { id: Theme; label: string; shortLabel: string; hint: string }> = {
+  auto: { id: "auto", label: "Auto (images follow WhatsApp, HTML the viewer)", shortLabel: "Auto", hint: "Images follow WhatsApp; HTML follows the viewer" },
+  light: { id: "light", label: "Light", shortLabel: "Light", hint: "Always the light look" },
+  dark: { id: "dark", label: "Dark", shortLabel: "Dark", hint: "Always the dark look" },
+};
 
 export const qualityChoices: Record<Quality, { id: Quality; label: string; shortLabel: string; hint: string }> = {
   best: { id: "best", label: "Best (sharpest, largest files)", shortLabel: "Best", hint: "2× resolution, light compression" },
@@ -39,6 +48,7 @@ export const DEFAULT_SETTINGS: Settings = {
   longImages: "single",
   quality: "best",
   customQuality: CUSTOM_QUALITY.fallback,
+  theme: "auto",
 };
 
 export const settingsItem = storage.defineItem<Settings>("sync:settings", { fallback: DEFAULT_SETTINGS });
@@ -52,5 +62,6 @@ export async function loadSettings(): Promise<Settings> {
     longImages: longImageChoices[s?.longImages] ? s.longImages : DEFAULT_SETTINGS.longImages,
     quality: qualityChoices[s?.quality] ? s.quality : DEFAULT_SETTINGS.quality,
     customQuality: clampQuality(s?.customQuality),
+    theme: themeChoices[s?.theme] ? s.theme : DEFAULT_SETTINGS.theme,
   };
 }

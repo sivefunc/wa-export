@@ -143,7 +143,7 @@ describe("settings menu", () => {
   afterEach(() => vi.useRealTimers());
   function setup(initial: Partial<Settings> = {}) {
     const saved: Partial<Settings>[] = [];
-    let current: Settings = { format: "zip", order: "date", longImages: "single", quality: "best", customQuality: 75, ...initial };
+    let current: Settings = { format: "zip", order: "date", longImages: "single", quality: "best", customQuality: 75, theme: "auto", ...initial };
     const ui = mountExportUi(document, {
       load: async () => ({ ...current }),
       save: async (s) => void saved.push((current = { ...s })),
@@ -186,6 +186,7 @@ describe("settings menu", () => {
     expect(items().map((i) => [i.querySelector(".text")!.textContent, i.querySelector(".value")!.textContent])).toEqual([
       ["Format", "HTML"],
       ["Order", "Oldest first"],
+      ["Theme", "Auto"],
     ]);
     expect(items().every((i) => i.getAttribute("aria-haspopup") === "menu")).toBe(true);
     expect(active()).toBe(items()[0]);
@@ -245,7 +246,7 @@ describe("settings menu", () => {
     items()[0].click();
     sub()!.querySelectorAll<HTMLElement>('[role="menuitemradio"]')[1].click();
     await flush();
-    expect(saved).toEqual([{ format: "html", order: "date", longImages: "single", quality: "best", customQuality: 75 }]);
+    expect(saved).toEqual([{ format: "html", order: "date", longImages: "single", quality: "best", customQuality: 75, theme: "auto" }]);
     expect(menu()).not.toBeNull();
     const options = [...sub()!.querySelectorAll<HTMLElement>('[role="menuitemradio"]')];
     expect(options.map((o) => o.getAttribute("aria-checked"))).toEqual(["false", "true", "false", "false", "false"]);
@@ -259,7 +260,7 @@ describe("settings menu", () => {
     items()[0].click();
     [...sub()!.querySelectorAll<HTMLElement>('[role="menuitemradio"]')].find((o) => o.textContent!.includes("PDF"))!.click();
     await flush();
-    expect(items().map((i) => i.querySelector(".text")!.textContent)).toEqual(["Format", "Order", "Quality"]);
+    expect(items().map((i) => i.querySelector(".text")!.textContent)).toEqual(["Format", "Order", "Theme", "Quality"]);
   });
 
   it("the arrow keys move through items and open and close submenus", async () => {
@@ -328,6 +329,7 @@ describe("settings menu", () => {
     expect(items().map((i) => [i.querySelector(".text")!.textContent, i.querySelector(".value")!.textContent])).toEqual([
       ["Format", "PNG"],
       ["Order", "Oldest first"],
+      ["Theme", "Auto"],
       ["Long images", "Split into parts"],
       ["Quality", "Best"],
     ]);
@@ -343,7 +345,7 @@ describe("settings menu", () => {
     expect(sub()!.querySelector("input[type=range]")).toBeNull(); // only once Custom is chosen
     custom.click();
     await flush();
-    expect(saved.at(-1)).toMatchObject({ quality: "custom", customQuality: 75 });
+    expect(saved.at(-1)).toMatchObject({ quality: "custom", customQuality: 75, theme: "auto" });
     const range = sub()!.querySelector<HTMLInputElement>("input[type=range]")!;
     expect([range.min, range.max, range.step, range.value]).toEqual(["10", "100", "5", "75"]);
     range.value = "40";
@@ -357,7 +359,7 @@ describe("settings menu", () => {
   });
 
   it("arrow keys on the slider adjust it instead of moving through the menu", async () => {
-    setup({ format: "pdf", quality: "custom", customQuality: 60 });
+    setup({ format: "pdf", quality: "custom", customQuality: 60, theme: "auto" });
     await open();
     items().find((i) => i.dataset.sub === "quality")!.click();
     const range = sub()!.querySelector<HTMLInputElement>("input[type=range]")!;
@@ -368,6 +370,21 @@ describe("settings menu", () => {
     expect(sub()).not.toBeNull();
     range.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", bubbles: true, composed: true }));
     expect(sub()).toBeNull();
+  });
+
+  it("offers Theme for the formats that have a look, not for ZIP", async () => {
+    setup({ format: "zip" });
+    await open();
+    expect(items().some((i) => i.dataset.sub === "theme")).toBe(false);
+    gear().click();
+    await flush();
+    document.body.innerHTML = "";
+    setup({ format: "html", theme: "dark" });
+    await open();
+    const theme = items().find((i) => i.dataset.sub === "theme")!;
+    expect(theme.querySelector(".value")!.textContent).toBe("Dark");
+    theme.click();
+    expect([...sub()!.querySelectorAll<HTMLElement>('[role="menuitemradio"]')].map((o) => o.dataset.value)).toEqual(["auto", "light", "dark"]);
   });
 
   it("without settings access there is no gear", () => {
@@ -389,7 +406,7 @@ describe("settings menu motion", () => {
   function setup() {
     const ui = mountExportUi(
       document,
-      { load: async () => ({ format: "zip", order: "date", longImages: "single" as const, quality: "best" as const, customQuality: 75 }), save: async () => {} },
+      { load: async () => ({ format: "zip", order: "date", longImages: "single" as const, quality: "best" as const, customQuality: 75, theme: "auto" }), save: async () => {} },
       { motion: true },
     );
     ui.setState({ kind: "idle", count: 2 });
@@ -452,7 +469,7 @@ describe("settings menu motion", () => {
   });
 
   it("without motion nothing animates", async () => {
-    const ui = mountExportUi(document, { load: async () => ({ format: "zip", order: "date", longImages: "single" as const, quality: "best" as const, customQuality: 75 }), save: async () => {} });
+    const ui = mountExportUi(document, { load: async () => ({ format: "zip", order: "date", longImages: "single" as const, quality: "best" as const, customQuality: 75, theme: "auto" }), save: async () => {} });
     ui.setState({ kind: "idle", count: 1 });
     gear().click();
     await flush();

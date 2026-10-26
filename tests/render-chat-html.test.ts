@@ -46,6 +46,16 @@ describe("renderChatHtml", () => {
     expect(doc.querySelectorAll("link, script[src], img[src], iframe")).toHaveLength(0);
   });
 
+  it("follows the viewer's system theme by default, or a fixed one when chosen", () => {
+    const css = (theme?: "auto" | "light" | "dark") =>
+      (renderChatHtml(bundle([record({ timestamp: T })]), { locale: "en-US", theme })[0] as string).match(/<style>([\s\S]*?)<\/style>/)![1];
+    expect(css()).toContain("@media (prefers-color-scheme: dark)");
+    expect(css("light")).not.toContain("prefers-color-scheme");
+    expect(css("light")).toMatch(/:root \{\s*color-scheme: light;\s*--bg: #efeae2/);
+    expect(css("dark")).not.toContain("prefers-color-scheme");
+    expect(css("dark")).toMatch(/:root \{\s*color-scheme: dark;\s*--bg: #0b141a/);
+  });
+
   it("header shows the chat name, message count and a Save as PDF button", () => {
     const { doc } = render(bundle([record({ timestamp: T }), record({ timestamp: T })]));
     expect(doc.querySelector(".chat-name")!.textContent).toBe("Frontend team");
