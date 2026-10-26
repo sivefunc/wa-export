@@ -36,20 +36,32 @@ describe("settings", () => {
   beforeEach(() => fakeBrowser.reset());
 
   it("defaults to zip ordered by date", async () => {
-    expect(DEFAULT_SETTINGS).toEqual({ format: "zip", order: "date", longImages: "single", quality: "best" });
-    expect(await loadSettings()).toEqual({ format: "zip", order: "date", longImages: "single", quality: "best" });
+    expect(DEFAULT_SETTINGS).toEqual({ format: "zip", order: "date", longImages: "single", quality: "best", customQuality: 75 });
+    expect(await loadSettings()).toEqual({ format: "zip", order: "date", longImages: "single", quality: "best", customQuality: 75 });
   });
 
   it("loadSettings replaces unknown ids with defaults", async () => {
     await settingsItem.setValue({ format: "tar-someday", order: "by-mood", longImages: "sideways" } as any);
-    expect(await loadSettings()).toEqual({ format: "zip", order: "date", longImages: "single", quality: "best" });
+    expect(await loadSettings()).toEqual({ format: "zip", order: "date", longImages: "single", quality: "best", customQuality: 75 });
   });
 
   it("keeps a valid long-images choice, and settings saved before it existed get the default", async () => {
-    await settingsItem.setValue({ format: "png", order: "date", longImages: "split", quality: "small" });
-    expect(await loadSettings()).toEqual({ format: "png", order: "date", longImages: "split", quality: "small" });
+    await settingsItem.setValue({ format: "png", order: "date", longImages: "split", quality: "small", customQuality: 40 });
+    expect(await loadSettings()).toEqual({ format: "png", order: "date", longImages: "split", quality: "small", customQuality: 40 });
     await settingsItem.setValue({ format: "png", order: "date" } as any);
     expect((await loadSettings()).longImages).toBe("single");
     expect((await loadSettings()).quality).toBe("best");
+    expect((await loadSettings()).customQuality).toBe(75);
+  });
+
+  it("keeps a custom quality between 10 and 100 percent, as a whole number", async () => {
+    const custom = async (customQuality: unknown) => {
+      await settingsItem.setValue({ format: "pdf", order: "date", longImages: "single", quality: "custom", customQuality } as any);
+      return (await loadSettings()).customQuality;
+    };
+    expect(await custom(62.4)).toBe(62);
+    expect(await custom(500)).toBe(100);
+    expect(await custom(1)).toBe(10);
+    expect(await custom("lots")).toBe(75);
   });
 });

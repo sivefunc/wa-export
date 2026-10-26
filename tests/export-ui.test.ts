@@ -143,7 +143,7 @@ describe("settings menu", () => {
   afterEach(() => vi.useRealTimers());
   function setup(initial: Partial<Settings> = {}) {
     const saved: Partial<Settings>[] = [];
-    let current: Settings = { format: "zip", order: "date", longImages: "single", quality: "best", ...initial };
+    let current: Settings = { format: "zip", order: "date", longImages: "single", quality: "best", customQuality: 75, ...initial };
     const ui = mountExportUi(document, {
       load: async () => ({ ...current }),
       save: async (s) => void saved.push((current = { ...s })),
@@ -245,7 +245,7 @@ describe("settings menu", () => {
     items()[0].click();
     sub()!.querySelectorAll<HTMLElement>('[role="menuitemradio"]')[1].click();
     await flush();
-    expect(saved).toEqual([{ format: "html", order: "date", longImages: "single", quality: "best" }]);
+    expect(saved).toEqual([{ format: "html", order: "date", longImages: "single", quality: "best", customQuality: 75 }]);
     expect(menu()).not.toBeNull();
     const options = [...sub()!.querySelectorAll<HTMLElement>('[role="menuitemradio"]')];
     expect(options.map((o) => o.getAttribute("aria-checked"))).toEqual(["false", "true", "false", "false", "false"]);
@@ -333,6 +333,43 @@ describe("settings menu", () => {
     ]);
   });
 
+  it("Custom quality shows a percentage slider that saves without closing the menu", async () => {
+    const { saved } = setup({ format: "pdf" });
+    await open();
+    const quality = () => items().find((i) => i.dataset.sub === "quality")!;
+    quality().click();
+    const custom = [...sub()!.querySelectorAll<HTMLElement>('[role="menuitemradio"]')].find((o) => o.dataset.value === "custom")!;
+    expect(custom.querySelector(".hint")!.textContent).toContain("75%");
+    expect(sub()!.querySelector("input[type=range]")).toBeNull(); // only once Custom is chosen
+    custom.click();
+    await flush();
+    expect(saved.at(-1)).toMatchObject({ quality: "custom", customQuality: 75 });
+    const range = sub()!.querySelector<HTMLInputElement>("input[type=range]")!;
+    expect([range.min, range.max, range.step, range.value]).toEqual(["10", "100", "5", "75"]);
+    range.value = "40";
+    range.dispatchEvent(new Event("input", { bubbles: true }));
+    expect(sub()!.querySelector(".custom-value")!.textContent).toBe("40%");
+    expect(quality().querySelector(".value")!.textContent).toBe("Custom 40%");
+    range.dispatchEvent(new Event("change", { bubbles: true }));
+    await flush();
+    expect(saved.at(-1)).toMatchObject({ quality: "custom", customQuality: 40 });
+    expect(menu()).not.toBeNull();
+  });
+
+  it("arrow keys on the slider adjust it instead of moving through the menu", async () => {
+    setup({ format: "pdf", quality: "custom", customQuality: 60 });
+    await open();
+    items().find((i) => i.dataset.sub === "quality")!.click();
+    const range = sub()!.querySelector<HTMLInputElement>("input[type=range]")!;
+    range.focus();
+    const e = new KeyboardEvent("keydown", { key: "ArrowLeft", bubbles: true, composed: true, cancelable: true });
+    range.dispatchEvent(e);
+    expect(e.defaultPrevented).toBe(false);
+    expect(sub()).not.toBeNull();
+    range.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", bubbles: true, composed: true }));
+    expect(sub()).toBeNull();
+  });
+
   it("without settings access there is no gear", () => {
     const ui = mountExportUi(document);
     ui.setState({ kind: "idle", count: 1 });
@@ -352,7 +389,7 @@ describe("settings menu motion", () => {
   function setup() {
     const ui = mountExportUi(
       document,
-      { load: async () => ({ format: "zip", order: "date", longImages: "single" as const, quality: "best" as const }), save: async () => {} },
+      { load: async () => ({ format: "zip", order: "date", longImages: "single" as const, quality: "best" as const, customQuality: 75 }), save: async () => {} },
       { motion: true },
     );
     ui.setState({ kind: "idle", count: 2 });
@@ -415,7 +452,7 @@ describe("settings menu motion", () => {
   });
 
   it("without motion nothing animates", async () => {
-    const ui = mountExportUi(document, { load: async () => ({ format: "zip", order: "date", longImages: "single" as const, quality: "best" as const }), save: async () => {} });
+    const ui = mountExportUi(document, { load: async () => ({ format: "zip", order: "date", longImages: "single" as const, quality: "best" as const, customQuality: 75 }), save: async () => {} });
     ui.setState({ kind: "idle", count: 1 });
     gear().click();
     await flush();

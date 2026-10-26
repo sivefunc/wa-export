@@ -57,3 +57,9 @@ export const QUALITY = {
   balanced: { scale: 1.5, jpeg: 0.8 },
   small: { scale: 1, jpeg: 0.65 },
 } as const;
+
+/** The preset for the settings; a custom percentage p gives (1 + p/100)× and JPEG quality p/100. */
+export function qualityPreset(s: { quality: string; customQuality: number }): { scale: number; jpeg: number } {
+  if (s.quality === "custom") return { scale: 1 + s.customQuality / 100, jpeg: s.customQuality / 100 };
+  return QUALITY[s.quality as keyof typeof QUALITY] ?? QUALITY.best;
+}

@@ -1,6 +1,6 @@
 import { orderings } from "../export/orderings";
 import { writers } from "../export/writers";
-import { longImageChoices, qualityChoices, type Settings } from "../settings";
+import { CUSTOM_QUALITY, longImageChoices, qualityChoices, type Settings } from "../settings";
 import { findForwardButton, toolbarSlot } from "./placement";
 import { buttonLabel, progressFraction, type UiState } from "./state";
 
@@ -89,6 +89,9 @@ svg { display: block; width: 24px; height: 24px; fill: currentColor; }
 .option { min-height: 48px; padding-block: 6px; }
 .option .label { display: flex; flex-direction: column; flex: 1; }
 .option .hint { color: var(--muted); font-size: 12.5px; line-height: 17px; white-space: normal; }
+.custom-row { display: flex; align-items: center; gap: 10px; padding: 2px 12px 8px 40px; }
+.custom-range { flex: 1; min-width: 120px; accent-color: var(--accent); }
+.custom-value { min-width: 36px; color: var(--muted); text-align: end; font-variant-numeric: tabular-nums; }
 `;
 
 // Material Symbols (Apache-2.0).
@@ -106,7 +109,7 @@ const icon = (name: keyof typeof ICONS) => `<svg viewBox="0 0 24 24" aria-hidden
 
 const esc = (s: string) => s.replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c]!);
 
-type SettingName = keyof Settings;
+type SettingName = Exclude<keyof Settings, "customQuality">;
 
 interface Choice {
   id: string;
@@ -117,7 +120,14 @@ interface Choice {
 const IMAGE_FORMATS = new Set(["png", "jpeg"]);
 const RASTER_FORMATS = new Set(["pdf", "png", "jpeg"]);
 
-const MENU: { name: SettingName; text: string; icon: keyof typeof ICONS; choices: () => Choice[]; when?: (s: Settings) => boolean }[] = [
+const MENU: {
+  name: SettingName;
+  text: string;
+  icon: keyof typeof ICONS;
+  choices: (s: Settings) => Choice[];
+  value?: (s: Settings, current: Choice) => string; // the item's value text, when not just the choice's
+  when?: (s: Settings) => boolean;
+}[] = [
   { name: "format", text: "Format", icon: "format", choices: () => Object.values(writers).map((w) => ({ id: w.id, text: w.fileType, hint: w.description })) },
   { name: "order", text: "Order", icon: "order", choices: () => Object.values(orderings).map((o) => ({ id: o.id, text: o.shortLabel, hint: o.label })) },
   {
@@ -131,7 +141,9 @@ const MENU: { name: SettingName; text: string; icon: keyof typeof ICONS; choices
     name: "quality",
     text: "Quality",
     icon: "quality",
-    choices: () => Object.values(qualityChoices).map((c) => ({ id: c.id, text: c.shortLabel, hint: c.hint })),
+    choices: (s) =>
+      Object.values(qualityChoices).map((c) => ({ id: c.id, text: c.shortLabel, hint: c.id === "custom" ? `${s.customQuality}%: ${c.hint.toLowerCase()}` : c.hint })),
+    value: (s, current) => (s.quality === "custom" ? `Custom ${s.customQuality}%` : current.text),
     when: (s) => RASTER_FORMATS.has(s.format),
   },
 ];
@@ -154,8 +166,14 @@ const LEAVE_MS = 150;
 
 function menuHtml(m: MenuState, fx: Fx): string {
   const entries = MENU.filter((entry) => !entry.when || entry.when(m.settings)).map((entry) => {
-    const choices = entry.choices();
+    const choices = entry.choices(m.settings);
     const current = choices.find((c) => c.id === m.settings[entry.name]) ?? choices[0];
+    const value = entry.value ? entry.value(m.settings, current) : current.text;
+    // Custom quality: a percentage slider under the options while it's the chosen one.
+    const slider =
+      entry.name === "quality" && m.settings.quality === "custom"
+        ? `<div class="custom-row"><input type="range" class="custom-range" aria-label="Custom quality, percent" min="${CUSTOM_QUALITY.min}" max="${CUSTOM_QUALITY.max}" step="${CUSTOM_QUALITY.step}" value="${m.settings.customQuality}"><span class="custom-value">${m.settings.customQuality}%</span></div>`
+        : "";
     const open = m.sub === entry.name;
     const sub = open
       ? `<div class="submenu${fx.sub ? ` ${fx.sub}` : ""}" role="menu" aria-label="${esc(entry.text)}">${choices
@@ -165,11 +183,11 @@ function menuHtml(m: MenuState, fx: Fx): string {
               <span class="icon">${checked ? icon("check") : ""}</span>
               <span class="label"><span class="text">${esc(c.text)}</span><span class="hint">${esc(c.hint)}</span></span></button>`;
           })
-          .join("")}</div>`
+          .join("")}${slider}</div>`
       : "";
     return `<div class="has-sub"><button class="item" role="menuitem" aria-haspopup="menu" aria-expanded="${open}" data-sub="${entry.name}">
       <span class="icon">${icon(entry.icon)}</span><span class="text">${esc(entry.text)}</span>
-      <span class="value">${esc(current?.text ?? "")}</span><span class="caret">${icon("caret")}</span></button>${sub}</div>`;
+      <span class="value">${esc(value)}</span><span class="caret">${icon("caret")}</span></button>${sub}</div>`;
   }).join("");
   return `<div class="menu${fx.menu ? ` ${fx.menu}` : ""}" role="menu" aria-label="Export settings">${entries}</div>`;
 }
@@ -315,10 +333,35 @@ export function mountExportUi(doc: Document, settingsAccess?: SettingsAccess, op
     hoverTimer = setTimeout(() => openSub(item.dataset.sub as SettingName, false), 150);
   });
 
+  // The custom-quality slider: show the percentage while dragging, save when released.
+  shadow.addEventListener("input", (event) => {
+    const range = (event.target as Element).closest<HTMLInputElement>(".custom-range");
+    if (!range || !isOpen()) return;
+    shadow.querySelector(".custom-value")!.textContent = `${range.value}%`;
+    const item = shadow.querySelector('[data-sub="quality"] .value');
+    if (item) item.textContent = `Custom ${range.value}%`;
+  });
+  shadow.addEventListener("change", async (event) => {
+    const range = (event.target as Element).closest<HTMLInputElement>(".custom-range");
+    if (!range || !isOpen() || !settingsAccess) return;
+    const next = { ...menu!.settings, quality: "custom" as const, customQuality: Number(range.value) };
+    menu = { ...menu!, settings: next };
+    await settingsAccess.save(next);
+  });
+
   // Keyboard like WhatsApp's menus: arrows move, Right/Enter open a submenu, Left/Escape go back.
   shadow.addEventListener("keydown", (event) => {
     if (!isOpen()) return;
     const e = event as KeyboardEvent;
+    // The slider keeps its own arrow keys; Escape still steps back out of the submenu.
+    if ((e.target as Element).closest?.(".custom-range")) {
+      if (e.key === "Escape") {
+        closeSub();
+        e.preventDefault();
+        e.stopPropagation();
+      }
+      return;
+    }
     const current = shadow.activeElement as HTMLElement | null;
     const list = current?.closest(".submenu, .menu");
     const siblings = list ? [...list.querySelectorAll<HTMLElement>(".item")].filter((el) => el.closest(".submenu, .menu") === list) : [];
