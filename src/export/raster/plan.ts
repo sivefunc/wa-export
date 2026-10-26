@@ -50,3 +50,10 @@ export function blocksIn<T extends Block>(blocks: T[], s: Slice): T[] {
 export function linesIn<T extends Block & { x: number; w: number }>(lines: T[], s: Slice): T[] {
   return lines.filter((l) => l.y + l.h / 2 >= s.y0 && l.y + l.h / 2 < s.y1).map((l) => ({ ...l, y: l.y - s.y0 }));
 }
+
+/** Output presets: canvas scale over the 900px layout, and JPEG quality (PDF pages are JPEG too). */
+export const QUALITY = {
+  best: { scale: 2, jpeg: 0.9 },
+  balanced: { scale: 1.5, jpeg: 0.8 },
+  small: { scale: 1, jpeg: 0.65 },
+} as const;

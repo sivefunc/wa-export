@@ -12,7 +12,7 @@ export default defineConfig({
   },
   manifest: ({ browser }) => ({
     name: "WA Export for WhatsApp Web",
-    description: "Export selected WhatsApp Web messages and their files to a ZIP, entirely on your computer.",
+    description: "Export selected WhatsApp Web messages to ZIP, HTML, PDF or images, entirely on your computer.",
     permissions: ["storage"],
     ...(browser === "firefox"
       ? {
