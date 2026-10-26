@@ -18,7 +18,9 @@ const { output } = await bundle.generate({ format: "iife" });
 const assetsDir = join(root, "docs/demo/assets");
 const assets = Object.fromEntries(readdirSync(assetsDir).map((f) => [f, readFileSync(join(assetsDir, f)).toString("base64")]));
 
-const browser = await chromium.launch();
+// CHROMIUM_CHANNEL=chrome uses an installed Google Chrome (CI runners ship one) instead of downloading
+// Playwright's Chromium; Chrome also decodes the H.264 demo clip.
+const browser = await chromium.launch(process.env.CHROMIUM_CHANNEL ? { channel: process.env.CHROMIUM_CHANNEL } : {});
 const page = await browser.newPage();
 await page.setContent("<!doctype html><title>raster</title><body></body>");
 await page.addScriptTag({ content: output[0].code });

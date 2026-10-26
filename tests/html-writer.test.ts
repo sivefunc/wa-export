@@ -44,10 +44,11 @@ describe("html writer", () => {
     const id = doc.querySelector("img.photo")!.getAttribute("data-media")!;
     const blocks = [...doc.querySelectorAll(`script[type="application/octet-stream"][data-for="${id}"]`)];
     expect(blocks.length).toBe(2);
-    const joined = blocks.flatMap((s) => [...decode(s.textContent!)]);
+    // Buffers, not spread arrays: 7 MB as JS arrays took CI runners past the default timeout.
+    const joined = Buffer.concat(blocks.map((s) => Buffer.from(s.textContent!, "base64")));
     expect(joined.length).toBe(bytes.length);
-    expect(joined.every((v, i) => v === bytes[i])).toBe(true);
-  });
+    expect(joined.equals(Buffer.from(bytes))).toBe(true);
+  }, 20_000);
 
   it("reports rising progress up to 100", async () => {
     const seen: number[] = [];
