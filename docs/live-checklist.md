@@ -7,6 +7,7 @@ WhatsApp Web 2.3000.1051605128 · WA-JS 4.7.2 · tested 2026-10-24 on the owner'
 | WA-JS loads and the bridge answers | ✅ | ✅ | HEALTH ready, GET_CHAT → `+1 555-0100` |
 | Select mode detected, ticks tracked | ✅ | ✅ | tracked count matches WhatsApp's "N selected" (3, 4, 5, 6) |
 | Selection spanning a long scroll | ✅ | | 5 ids tracked after scrolling up 12 screens |
+| Selection survives scrolling with 48 rows loaded | ✅ | | 2026-11-06: 14 ticked (images, voice notes, a document, texts); 90 samples while scrolling, WhatsApp's "14 selected" = "Export 14" every time; ZIP with 11 media files, no problems |
 | Leaving select mode clears | ✅ | | "Cancel selection" → `{active:false, ids:[]}` |
 | Export button placement | ✅ | ✅ | in the toolbar right after Forward; summary panel above it |
 | Nothing selected | ✅ | | "Select at least one message first." |

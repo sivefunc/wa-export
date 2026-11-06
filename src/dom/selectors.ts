@@ -6,6 +6,7 @@
 //   The bare id has no chat/sender prefix; the page side resolves it through MsgStore.
 // - In "Select messages" mode each message gets a nested
 //   <input type="checkbox" aria-checked="true|false" aria-label="Checkbox, unselected , ">.
+//   2026-11-06: WhatsApp draws these only on rows near the screen (14 checkboxes for 48 loaded rows).
 // - The selection toolbar has buttons aria-label "Cancel selection", "Star", "Delete",
 //   "Forward messages", "Download"; icons are <svg><title>ic-fast-forward</title></svg>, not data-icon.
 // - The "N selected" counter is a leaf <span aria-live="polite">.

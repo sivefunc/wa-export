@@ -103,6 +103,21 @@ describe("isSelectionModeActive", () => {
     expect(isSelectionModeActive(document)).toBe(false);
   });
 
+  // Live 2026-11-06: WhatsApp draws checkboxes only on rows near the screen (14 of 48 loaded rows
+  // after scrolling), so select mode looked gone, the selection was cleared and Export disappeared.
+  it("only rows on screen count: off-screen rows without checkboxes don't end select mode", () => {
+    for (let i = 0; i < 40; i++) {
+      const row = document.createElement("div");
+      row.dataset.id = `OLD${i}`;
+      row.dataset.testid = `conv-msg-OLD${i}`;
+      main().append(row);
+      setBox(row, { top: -5000 + i * 100, height: 50 });
+    }
+    nestedRow("A", true, 100);
+    nestedRow("B", false, 200);
+    expect(isSelectionModeActive(document)).toBe(true);
+  });
+
   it("ignores checkboxes outside #main, like the login page's", () => {
     document.body.innerHTML = '<label><input type="checkbox" aria-checked="true"></label>';
     setBox(document.querySelector("input")!, { top: 10, height: 20 });
