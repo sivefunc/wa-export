@@ -1,12 +1,12 @@
 # Releasing
 
-`.github/workflows/release.yml` publishes to the Chrome Web Store and Firefox Add-ons (AMO). Pushing a
-`v*` tag does four things:
+`.github/workflows/release.yml` publishes to Firefox Add-ons (AMO) and, once it's set up, the Chrome Web
+Store. Pushing a `v*` tag does four things:
 
 1. Runs every CI check (`ci.yml`): typecheck, build, unit tests on Node 22/24/26, Firefox and Chromium.
 2. Checks that the tag matches `version` in `package.json`.
-3. Uploads the Chrome zip, the Firefox zip and the Firefox sources zip with `wxt submit`, and sends
-   them for review.
+3. Uploads the Firefox zip and the Firefox sources zip with `wxt submit`, plus the Chrome zip if the
+   `CHROME_EXTENSION_ID` variable is set, and sends them for review.
 4. Creates a GitHub Release with the same three zips attached.
 
 ## Release a version
@@ -20,6 +20,10 @@ Then approve the run in the `stores` environment (Actions → the run → Review
 review takes from hours to a few days; the stores email you the result.
 
 ## One-time setup
+
+You can start with Firefox only and skip every Chrome step below. Until `CHROME_EXTENSION_ID` is set,
+releases skip the Chrome Web Store with a notice; the Chrome zip is still attached to each GitHub
+Release. To add Chrome later, do its steps and set that variable.
 
 ### 1. Submit the first version by hand
 
