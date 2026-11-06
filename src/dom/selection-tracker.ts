@@ -23,6 +23,12 @@ function isVisible(el: Element): boolean {
   return style?.display !== "none" && style?.visibility !== "hidden";
 }
 
+function isOnScreen(el: Element, doc: Document): boolean {
+  const r = el.getBoundingClientRect();
+  const height = doc.defaultView?.innerHeight ?? 0;
+  return (r.width > 0 || r.height > 0) && r.bottom > 0 && r.top < height;
+}
+
 /**
  * Select mode exists only inside an open chat (the login page's checkbox doesn't count), and gives
  * every message a checkbox. A poll's option checkboxes sit inside one message, so require most
@@ -34,7 +40,10 @@ export function isSelectionModeActive(doc: Document): boolean {
   const boxes = [...root.querySelectorAll(SEL.checkbox)].filter(isVisible);
   if (!boxes.length) return false;
   if (boxes.some((b) => !b.closest(SEL.messageRow))) return true;
-  const rows = [...root.querySelectorAll(SEL.messageRow)];
+  // WhatsApp draws checkboxes only on rows near the screen, so judge by the rows on screen.
+  const all = [...root.querySelectorAll(SEL.messageRow)];
+  const onScreen = all.filter((row) => isOnScreen(row, doc));
+  const rows = onScreen.length ? onScreen : all;
   const withBox = rows.filter((row) => boxes.some((b) => row.contains(b))).length;
   return withBox / rows.length >= 0.5;
 }
