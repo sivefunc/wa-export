@@ -7,6 +7,7 @@ export interface SelectionSnapshot {
 
 const GEOMETRY_SLACK_PX = 24;
 
+/** A checkbox's state from aria-checked, else from a native input; null if it shows neither. */
 export function checkedState(el: Element): boolean | null {
   const aria = el.getAttribute("aria-checked");
   if (aria === "true") return true;
@@ -15,6 +16,7 @@ export function checkedState(el: Element): boolean | null {
   return null;
 }
 
+/** Rendered with a size and not hidden by display or visibility. Off-screen elements count as visible. */
 function isVisible(el: Element): boolean {
   if (!el.isConnected) return false;
   const r = el.getBoundingClientRect();
@@ -23,6 +25,7 @@ function isVisible(el: Element): boolean {
   return style?.display !== "none" && style?.visibility !== "hidden";
 }
 
+/** Has a size and overlaps the window vertically, so it is at least partly on screen. */
 function isOnScreen(el: Element, doc: Document): boolean {
   const r = el.getBoundingClientRect();
   const height = doc.defaultView?.innerHeight ?? 0;
