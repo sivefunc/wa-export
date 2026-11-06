@@ -18,7 +18,7 @@ export default defineConfig({
       ? {
           browser_specific_settings: {
             gecko: {
-              id: "sivefunc@tuta.io",
+              id: "sivefunc@gmail.com",
               strict_min_version: "128.0",
               // The extension collects nothing; AMO requires this declaration.
               data_collection_permissions: { required: ["none"] },

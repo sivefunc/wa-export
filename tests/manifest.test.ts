@@ -42,7 +42,7 @@ describe("browser-specific keys", () => {
 
   it("firefox has a fixed id and requires Firefox 128", () => {
     const gecko = readManifest("firefox-mv3").browser_specific_settings.gecko;
-    expect(gecko.id).toBe("sivefunc@tuta.io");
+    expect(gecko.id).toBe("sivefunc@gmail.com");
     expect(gecko.strict_min_version).toBe("128.0");
   });
 
