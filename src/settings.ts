@@ -1,6 +1,6 @@
 import { storage } from "wxt/utils/storage";
 import { DEFAULT_ORDERING, orderings } from "./export/orderings";
-import { DEFAULT_WRITER, writers } from "./export/writers";
+import { DEFAULT_WRITER, isWriterId } from "./export/writers/catalog";
 
 export type LongImages = "single" | "split";
 
@@ -57,7 +57,7 @@ export const settingsItem = storage.defineItem<Settings>("sync:settings", { fall
 export async function loadSettings(): Promise<Settings> {
   const s = await settingsItem.getValue();
   return {
-    format: writers[s?.format] ? s.format : DEFAULT_SETTINGS.format,
+    format: isWriterId(s?.format) ? s.format : DEFAULT_SETTINGS.format,
     order: orderings[s?.order] ? s.order : DEFAULT_SETTINGS.order,
     longImages: longImageChoices[s?.longImages] ? s.longImages : DEFAULT_SETTINGS.longImages,
     quality: qualityChoices[s?.quality] ? s.quality : DEFAULT_SETTINGS.quality,

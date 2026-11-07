@@ -3,6 +3,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { fakeBrowser } from "wxt/testing/fake-browser";
 import { renderOptions } from "../src/options";
 import { settingsItem } from "../src/settings";
+import { spyOnHtmlParsing } from "./helpers/no-html-parsing";
 
 beforeEach(() => {
   fakeBrowser.reset();
@@ -19,6 +20,13 @@ describe("options page", () => {
     expect([...select("order").options].map((o) => o.value)).toEqual(["date"]);
     expect(root().textContent).toContain("Export format");
     expect(root().textContent).toContain("Message order");
+  });
+
+  it("builds the page without parsing HTML (Firefox Add-ons flags innerHTML)", async () => {
+    const parsing = spyOnHtmlParsing();
+    await renderOptions(root());
+    expect(parsing.calls()).toBe(0);
+    parsing.restore();
   });
 
   it("defaults are selected on first run", async () => {

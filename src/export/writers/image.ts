@@ -5,6 +5,7 @@ import type { Settings } from "../../settings";
 import { canvasBlob, layOut, prepareMedia, rasterize, useDarkTheme } from "../raster/dom";
 import { buildPdf, type PdfPage } from "../raster/pdf";
 import { chooseScale, linesIn, MAX_SIDE, paginate, qualityPreset } from "../raster/plan";
+import { writerCatalog } from "./catalog";
 import type { Writer } from "./index";
 
 // Large media is read in full to draw it, like the HTML export.
@@ -36,10 +37,7 @@ function imageWriter(id: "png" | "jpeg"): Writer {
   const type = id === "png" ? "image/png" : "image/jpeg";
   const ext = id === "png" ? "png" : "jpg";
   return {
-    id,
-    label: id === "png" ? "PNG image (WhatsApp look)" : "JPEG image (WhatsApp look)",
-    fileType: id.toUpperCase(),
-    description: id === "png" ? "One sharp image of the chat" : "One smaller image of the chat",
+    ...writerCatalog[id],
     limits: LIMITS,
     wantsAvatars: true,
     async write(b, onProgress, settings) {
@@ -80,10 +78,7 @@ export const jpegWriter = imageWriter("jpeg");
 const A4 = { widthPt: 595.28, heightPt: 841.89 };
 
 export const pdfWriter: Writer = {
-  id: "pdf",
-  label: "PDF (WhatsApp look, searchable)",
-  fileType: "PDF",
-  description: "A4 pages; text can be searched and copied",
+  ...writerCatalog.pdf,
   limits: LIMITS,
   wantsAvatars: true,
   async write(b, onProgress, settings) {

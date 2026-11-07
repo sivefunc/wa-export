@@ -3,13 +3,11 @@ import { MAX_BYTES, WARN_BYTES } from "../collect";
 import { exportFilename } from "../naming";
 import { renderChatMd } from "../render-chat-md";
 import { renderMessagesJson } from "../render-json";
+import { writerCatalog } from "./catalog";
 import type { Writer } from "./index";
 
 export const zipWriter: Writer = {
-  id: "zip",
-  label: "ZIP (chat.md + messages.json + media/)",
-  fileType: "ZIP",
-  description: "Markdown + files, for Claude Code",
+  ...writerCatalog.zip,
   limits: { warnBytes: WARN_BYTES, maxBytes: MAX_BYTES, hint: "Select fewer large files." },
   async write(b, onProgress) {
     const zip = new JSZip();
