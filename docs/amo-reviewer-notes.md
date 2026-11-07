@@ -39,15 +39,18 @@ The output is `.output/firefox-mv3/`, which matches the uploaded package.
 - *eval can be harmful* in `vendor/wppconnect-wa.js`: WA-JS's file-type detection includes a helper
   for Node.js streams that calls `eval("require")("stream")`. It only runs when given a Node stream,
   which never happens in a browser. The file is unmodified, so we can't remove it.
-- *Unsafe assignment to innerHTML* (2) in `content-scripts/wa-export.js`, from
-  `src/export/raster/dom.ts`. The PNG/PDF export lays the chat out from the same renderer as the
-  HTML export (`src/export/render-chat-html.ts`), which escapes all message text
-  (`src/export/wa-html.ts`, tested in `tests/wa-html.test.ts`) and emits no scripts or event
-  handlers. The first assignment fills a closed, offscreen shadow root so the layout can be measured.
-  WhatsApp's CSP has no `'unsafe-inline'` in `script-src`. The second fills a detached
-  `document.implementation.createHTMLDocument()` document, which runs nothing and loads nothing,
-  before serializing it into an SVG `<foreignObject>`. The Export button and settings page build
-  their DOM without parsing HTML.
+
+**No HTML parsing into the page.** Nothing assigns `innerHTML`. The Export button and settings page build
+their DOM with `createElement` and text nodes (`src/ui/dom.ts`). The PNG/PDF export lays the chat out
+from the same renderer as the HTML export (`src/export/render-chat-html.ts`), which escapes all
+message text (`src/export/wa-html.ts`). It parses that HTML with `DOMParser` into an inert document
+and sanitizes it (`src/export/raster/safe-html.ts`) before importing it into a closed, offscreen shadow
+root to measure it. The sanitizer removes scripts, frames, forms, SVG animation elements and every
+event handler attribute.
+Sources may only be raster `data:image/` URLs or `#fragments`, so the layout loads nothing. Links
+may only be relative, `#`, http(s), `mailto:` or `tel:`. `srcset` and form actions are removed, as are
+CSS (inline or in `<style>`) with `@import`, `url()`, `image-set()` or CSS escapes. The test `tests/bundle.test.ts` fails if a
+shipped file assigns `innerHTML` or `outerHTML` (dot or bracket access, `=` or compound `+=`).
 
 **Testing.** WhatsApp Web needs a WhatsApp account on a phone, so we can't provide test credentials.
 With any account: open https://web.whatsapp.com, open a chat, choose ⋮ → Select messages, tick a few
