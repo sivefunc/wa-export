@@ -1,4 +1,3 @@
-import JSZip from "jszip";
 import type { ExportBundle } from "../../types";
 import { exportFilename } from "../naming";
 import type { Settings } from "../../settings";
@@ -6,6 +5,7 @@ import { canvasBlob, layOut, prepareMedia, rasterize, useDarkTheme } from "../ra
 import { buildPdf, type PdfPage } from "../raster/pdf";
 import { chooseScale, linesIn, MAX_SIDE, paginate, qualityPreset } from "../raster/plan";
 import type { Writer } from "./index";
+import { buildZip, type ZipEntry } from "./zip-archive";
 
 // Large media is read in full to draw it, like the HTML export.
 const LIMITS = { warnBytes: 200 * 1024 * 1024, maxBytes: 500 * 1024 * 1024, hint: "Select fewer large files, or export as ZIP." };
@@ -32,6 +32,7 @@ function progress(onProgress?: (pct: number) => void) {
 export const TOO_LONG =
   "This chat is too long for one image. Turn on ⚙ → Long images → Split into parts, or select fewer messages.";
 
+/** A PNG or JPEG writer: one image of the chat, or (Long images → Split) a ZIP of parts cut between messages. */
 function imageWriter(id: "png" | "jpeg"): Writer {
   const type = id === "png" ? "image/png" : "image/jpeg";
   const ext = id === "png" ? "png" : "jpg";
@@ -58,15 +59,16 @@ function imageWriter(id: "png" | "jpeg"): Writer {
       if (settings?.longImages !== "split") throw new Error(TOO_LONG);
       // Parts at the preset's scale, each within the canvas limit, cut between messages.
       const slices = paginate(laid.blocks, laid.height, Math.floor(MAX_SIDE / preset.scale));
-      const zip = new JSZip();
+      const parts: ZipEntry[] = [];
       const width = String(slices.length).length;
       for (const [i, s] of slices.entries()) {
         const canvas = await rasterize(doc, laid, s, preset.scale);
         const blob = await canvasBlob(canvas, type, preset.jpeg);
-        zip.file(name.replace(/\.\w+$/, `-${String(i + 1).padStart(width, "0")}.${ext}`), new Uint8Array(await blob.arrayBuffer()), { compression: "STORE" });
+        const path = name.replace(/\.\w+$/, `-${String(i + 1).padStart(width, "0")}.${ext}`);
+        parts.push({ path, data: new Uint8Array(await blob.arrayBuffer()), compress: false });
         report(40 + Math.floor(((i + 1) / slices.length) * 55));
       }
-      const blob = await zip.generateAsync({ type: "blob", mimeType: "application/zip" });
+      const blob = await buildZip(parts);
       report(100);
       return { blob, filename: name.replace(/\.\w+$/, ".zip") };
     },
@@ -79,6 +81,7 @@ export const jpegWriter = imageWriter("jpeg");
 // A4 portrait; one page shows PAGE_HEIGHT CSS px of the 900px-wide chat.
 const A4 = { widthPt: 595.28, heightPt: 841.89 };
 
+/** A4 PDF: each page is a JPEG of a slice of the chat, with an invisible text layer for search and copy. */
 export const pdfWriter: Writer = {
   id: "pdf",
   label: "PDF (WhatsApp look, searchable)",

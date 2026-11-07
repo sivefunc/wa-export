@@ -20,11 +20,12 @@ describe("store packages", () => {
     expect(listing).not.toMatch(/\.zip$/m);
   });
 
-  it("credits WA-JS (Apache-2.0) and JSZip in THIRD_PARTY_NOTICES.md", () => {
+  it("credits WA-JS (Apache-2.0) and fflate (MIT) in THIRD_PARTY_NOTICES.md", () => {
     const notices = readFileSync("THIRD_PARTY_NOTICES.md", "utf8");
     expect(notices).toContain("@wppconnect/wa-js");
     expect(notices).toContain("Apache License");
-    expect(notices).toContain("jszip");
+    expect(notices).toContain("fflate");
+    expect(notices).not.toContain("jszip");
   });
 
   it("ships a privacy policy saying nothing is collected", () => {
