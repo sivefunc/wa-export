@@ -2,10 +2,11 @@ import { readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 
-/** Every JavaScript file in a build, as [relative path, source]. */
+/** Every JavaScript file in a build, as [relative path with / separators, source]. */
 function scripts(target: string): [string, string][] {
   const root = `.output/${target}`;
   return readdirSync(root, { recursive: true, encoding: "utf8" })
+    .map((f) => f.replaceAll("\\", "/")) // Windows lists content-scripts\wa-export.js
     .filter((f) => f.endsWith(".js"))
     .map((f) => [f, readFileSync(join(root, f), "utf8")]);
 }
