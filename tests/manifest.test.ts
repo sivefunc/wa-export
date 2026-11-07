@@ -40,10 +40,14 @@ describe("browser-specific keys", () => {
     expect(readManifest("chrome-mv3").minimum_chrome_version).toBe("111");
   });
 
-  it("firefox has a fixed id and requires Firefox 128", () => {
+  it("firefox has a fixed id and requires Firefox 140 (data_collection_permissions)", () => {
     const gecko = readManifest("firefox-mv3").browser_specific_settings.gecko;
     expect(gecko.id).toBe("sivefunc@gmail.com");
-    expect(gecko.strict_min_version).toBe("128.0");
+    expect(gecko.strict_min_version).toBe("140.0");
+  });
+
+  it("firefox for android requires 142, where data_collection_permissions arrived", () => {
+    expect(readManifest("firefox-mv3").browser_specific_settings.gecko_android).toEqual({ strict_min_version: "142.0" });
   });
 
   it("firefox declares that no data is collected", () => {
