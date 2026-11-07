@@ -5,7 +5,7 @@ import { mkdirSync, mkdtempSync, readdirSync, readFileSync, writeFileSync } from
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
-import JSZip from "jszip";
+import { unzipSync } from "fflate";
 import { chromium } from "playwright";
 import { rolldown } from "rolldown";
 
@@ -94,8 +94,7 @@ console.log(`text XML can't carry: ${oddOk ? "ok" : "FAIL"} (${oddText})`);
 failed ||= !oddOk;
 const tooLongOk = /too long for one image/.test(tooLong);
 console.log(`long chat as one image: ${tooLongOk ? "ok, refused" : "FAIL"} (${tooLong})`);
-const zip = await JSZip.loadAsync(Buffer.from(split.b64, "base64"));
-const parts = Object.keys(zip.files).filter((f) => f.endsWith(".png"));
+const parts = Object.keys(unzipSync(new Uint8Array(Buffer.from(split.b64, "base64")))).filter((f) => f.endsWith(".png"));
 const partsOk = split.filename.endsWith(".zip") && parts.length >= 2;
 console.log(`long chat split into parts: ${partsOk ? "ok" : "FAIL"} ${parts.length} PNGs in ${split.filename}, ${Math.round(split.size / 1024)} KB in ${split.ms} ms`);
 const longPdfBytes = Buffer.from(longPdf.b64, "base64");

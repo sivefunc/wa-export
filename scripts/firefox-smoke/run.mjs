@@ -7,7 +7,7 @@ import { cpSync, existsSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, 
 import { tmpdir } from "node:os";
 import { dirname, join, relative } from "node:path";
 import { fileURLToPath } from "node:url";
-import JSZip from "jszip";
+import { zipSync } from "fflate";
 import { rolldown } from "rolldown";
 import { Builder } from "selenium-webdriver";
 import firefox from "selenium-webdriver/firefox.js";
@@ -23,18 +23,18 @@ const assetsDir = join(here, "../../docs/demo/assets");
 const assets = Object.fromEntries(readdirSync(assetsDir).map((f) => [f, readFileSync(join(assetsDir, f)).toString("base64")]));
 writeFileSync(join(ext, "assets.js"), `globalThis.__waDemoAssets = ${JSON.stringify(assets)};`);
 
-// An .xpi is a zip of the add-on folder (built with JSZip so it works on any OS).
-const xpiZip = new JSZip();
+// An .xpi is a zip of the add-on folder (built with fflate so it works on any OS).
+const xpiFiles = {};
 const addDir = (dir) => {
   for (const entry of readdirSync(dir, { withFileTypes: true })) {
     const full = join(dir, entry.name);
     if (entry.isDirectory()) addDir(full);
-    else xpiZip.file(relative(ext, full).split("\\").join("/"), readFileSync(full));
+    else xpiFiles[relative(ext, full).split("\\").join("/")] = new Uint8Array(readFileSync(full));
   }
 };
 addDir(ext);
 const xpi = join(work, "smoke.xpi");
-writeFileSync(xpi, await xpiZip.generateAsync({ type: "nodebuffer" }));
+writeFileSync(xpi, zipSync(xpiFiles));
 
 const options = new firefox.Options()
   .addArguments("-headless")

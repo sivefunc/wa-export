@@ -24,7 +24,7 @@
   },
   "dependencies": {
     "@wppconnect/wa-js": "4.7.2",
-    "jszip": "3.10.2"
+    "fflate": "0.8.3"
   },
   "devDependencies": {
     "@types/jsdom": "30.0.0",

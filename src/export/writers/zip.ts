@@ -1,9 +1,9 @@
-import JSZip from "jszip";
 import { MAX_BYTES, WARN_BYTES } from "../collect";
 import { exportFilename } from "../naming";
 import { renderChatMd } from "../render-chat-md";
 import { renderMessagesJson } from "../render-json";
 import type { Writer } from "./index";
+import { buildZip, type ZipEntry } from "./zip-archive";
 
 export const zipWriter: Writer = {
   id: "zip",
@@ -12,25 +12,16 @@ export const zipWriter: Writer = {
   description: "Markdown + files, for Claude Code",
   limits: { warnBytes: WARN_BYTES, maxBytes: MAX_BYTES, hint: "Select fewer large files." },
   async write(b, onProgress) {
-    const zip = new JSZip();
-    zip.file("chat.md", renderChatMd(b));
-    zip.file("messages.json", renderMessagesJson(b));
+    const entries: ZipEntry[] = [
+      { path: "chat.md", data: renderChatMd(b), compress: true },
+      { path: "messages.json", data: renderMessagesJson(b), compress: true },
+    ];
     for (const [path, blob] of b.media) {
       // Firefox content scripts: bytes from the page (postMessage, Blob reads) deny `.constructor`
-      // to JSZip, which then hangs silently at 33%. A structuredClone made here is our own.
-      const bytes = new Uint8Array(structuredClone(await blob.arrayBuffer()));
-      // Photos, video and audio are already compressed; deflating them only burns CPU.
-      zip.file(path, bytes, { compression: "STORE" });
+      // to libraries, which can then fail silently. A structuredClone made here is our own.
+      entries.push({ path, data: new Uint8Array(structuredClone(await blob.arrayBuffer())), compress: false });
     }
-    let last = -1;
-    const blob = await zip.generateAsync(
-      { type: "blob", mimeType: "application/zip", compression: "DEFLATE", compressionOptions: { level: 6 } },
-      ({ percent }) => {
-        const pct = Math.floor(percent);
-        if (pct > last) onProgress?.((last = pct));
-      },
-    );
-    if (last < 100) onProgress?.(100);
+    const blob = await buildZip(entries, onProgress);
     return { blob, filename: exportFilename(b.chat.name, b.exportedAt) };
   },
 };
