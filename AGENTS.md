@@ -5,7 +5,7 @@ Guide for coding agents (Claude Code, Codex, Cursor, …) working on this repo. 
 
 ## What this is
 
-A WXT (MV3) browser extension for Chrome 111+ and Firefox 128+. In WhatsApp Web the user selects messages, clicks
+A WXT (MV3) browser extension for Chrome 111+ and Firefox 140+ (142+ on Android). In WhatsApp Web the user selects messages, clicks
 **Export**, and gets a file: a ZIP (`chat.md` + `messages.json` + `media/`), a single HTML page that looks like
 WhatsApp, or that same look as a searchable PDF or a PNG/JPEG image. Everything runs locally.
 

@@ -17,12 +17,14 @@ export default defineConfig({
     ...(browser === "firefox"
       ? {
           browser_specific_settings: {
+            // data_collection_permissions needs Firefox 140 on desktop and 142 on Android.
             gecko: {
               id: "sivefunc@gmail.com",
-              strict_min_version: "128.0",
+              strict_min_version: "140.0",
               // The extension collects nothing; AMO requires this declaration.
               data_collection_permissions: { required: ["none"] },
             },
+            gecko_android: { strict_min_version: "142.0" },
           },
         }
       : { minimum_chrome_version: "111" }),
