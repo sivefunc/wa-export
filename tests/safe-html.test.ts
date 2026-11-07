@@ -1,6 +1,7 @@
 // @vitest-environment jsdom
 import { describe, expect, it } from "vitest";
 import { parseSafeHtml } from "../src/export/raster/safe-html";
+import { snapshotCss } from "../src/export/render-chat-html";
 
 const html = (markup: string) => parseSafeHtml(markup).body.innerHTML;
 
@@ -41,10 +42,10 @@ describe("parseSafeHtml", () => {
         '<a href="javascript:alert(1)">d</a><a href=" JaVa\tScript:alert(1)">e</a><a href="data:text/html,x">f</a>' +
         '<svg><a href="vbscript:x"><text>g</text></a></svg>',
     );
-    expect(out).toContain('href="https://example.com/x"');
-    expect(out).toContain('href="mailto:ana@example.com"');
-    expect(out).toContain('href="#top"');
-    expect(out).not.toMatch(/script:|data:text/i);
+    expect(out).toBe(
+      '<a href="https://example.com/x">a</a><a href="mailto:ana@example.com">b</a><a href="#top">c</a>' +
+        "<a>d</a><a>e</a><a>f</a><svg><a><text>g</text></a></svg>",
+    );
   });
 
   it("removes srcset, action and formaction outright: the renderer never uses them", () => {
@@ -58,6 +59,26 @@ describe("parseSafeHtml", () => {
         '<div style="background-image: URL (x)">c</div><div style="background:image-set(&quot;x.png&quot; 1x)">d</div><div style="background:u\\72l(x)">e</div>',
     );
     expect(out).toBe('<div style="width:900px;height:12px">a</div><div>b</div><div>c</div><div>d</div><div>e</div>');
+  });
+
+  it("removes <style> elements that could load something; the real snapshot CSS passes unchanged", () => {
+    const out = html(
+      '<div><style>.a{color:red}</style><style>@import "https://x/a.css";</style><style>.b{background:url(https://x/b.png)}</style>' +
+        '<style>.c{background:image-set("x.png" 1x)}</style><style>.d{background:u\\72l(x)}</style><svg><style>@import url(x)</style></svg></div>',
+    );
+    expect(out).toBe("<div><style>.a{color:red}</style><svg></svg></div>");
+    for (const dark of [false, true]) {
+      const css = `${snapshotCss(dark)}\n.slot > * { margin: 0 !important; }`;
+      expect(parseSafeHtml(`<div class="wa"><style>${css}</style></div>`).querySelector("style")?.textContent).toBe(css);
+    }
+  });
+
+  it("removes SVG animation elements, which could rewrite an href after sanitizing", () => {
+    const out = html(
+      '<svg><a href="#x"><set attributeName="href" to="https://x/"></set><animate attributeName="href" values="https://x/"></animate>' +
+        '<animateMotion dur="1s"></animateMotion><animateTransform attributeName="transform"></animateTransform><text>t</text></a></svg>',
+    );
+    expect(out).toBe('<svg><a href="#x"><text>t</text></a></svg>');
   });
 
   it("strips inside nested content too", () => {

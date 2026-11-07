@@ -45,10 +45,11 @@ their DOM with `createElement` and text nodes (`src/ui/dom.ts`). The PNG/PDF exp
 from the same renderer as the HTML export (`src/export/render-chat-html.ts`), which escapes all
 message text (`src/export/wa-html.ts`). It parses that HTML with `DOMParser` into an inert document
 and sanitizes it (`src/export/raster/safe-html.ts`) before importing it into a closed, offscreen shadow
-root to measure it. The sanitizer removes scripts, frames, forms and every event handler attribute.
+root to measure it. The sanitizer removes scripts, frames, forms, SVG animation elements and every
+event handler attribute.
 Sources may only be raster `data:image/` URLs or `#fragments`, so the layout loads nothing. Links
 may only be relative, `#`, http(s), `mailto:` or `tel:`. `srcset` and form actions are removed, as are
-inline styles with `url()`, `image-set()` or CSS escapes. The test `tests/bundle.test.ts` fails if a
+CSS (inline or in `<style>`) with `@import`, `url()`, `image-set()` or CSS escapes. The test `tests/bundle.test.ts` fails if a
 shipped file assigns `innerHTML` or `outerHTML` (dot or bracket access, `=` or compound `+=`).
 
 **Testing.** WhatsApp Web needs a WhatsApp account on a phone, so we can't provide test credentials.

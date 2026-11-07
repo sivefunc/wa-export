@@ -2,8 +2,14 @@
 // already escapes all chat text (src/export/wa-html.ts); this is a second line of defence, so an
 // escaping bug can't turn a message into code running in WhatsApp's page, or make it load anything.
 
-/** Elements that run code, load other documents or change how the page resolves URLs. */
-const BLOCKED_ELEMENTS = new Set(["script", "iframe", "frame", "frameset", "object", "embed", "applet", "base", "link", "meta", "form", "noscript"]);
+/**
+ * Elements that run code, load other documents, change how the page resolves URLs, or (SVG animation)
+ * could rewrite an attribute after sanitizing. SVG names keep their case in localName.
+ */
+const BLOCKED_ELEMENTS = new Set([
+  "script", "iframe", "frame", "frameset", "object", "embed", "applet", "base", "link", "meta", "form", "noscript",
+  "animate", "animateColor", "animateMotion", "animateTransform", "set",
+]);
 
 /** Attributes the renderer never uses that hold URLs a browser could follow or load: always removed. */
 const DROPPED_ATTRIBUTES = new Set(["srcset", "imagesrcset", "action", "formaction"]);
@@ -27,21 +33,24 @@ function isSafeLink(value: string): boolean {
   return !scheme || ["http", "https", "mailto", "tel"].includes(scheme);
 }
 
-/** Inline styles that could load something: url(), image-set(), or a CSS escape that could spell either. */
-const LOADING_STYLE = /url\s*\(|image-set\s*\(|\\/i;
+/** CSS that could load something: @import, url(), image(), image-set(), cross-fade(), or a CSS escape that could spell one. */
+const LOADING_CSS = /@import|url\s*\(|image\s*\(|image-set\s*\(|cross-fade\s*\(|\\/i;
 
 /** True when the attribute could run code or load something, so it must go. */
 function isUnsafeAttribute(el: Element, name: string, value: string): boolean {
   if (name.startsWith("on") || DROPPED_ATTRIBUTES.has(name)) return true;
-  if (name === "style") return LOADING_STYLE.test(value);
+  if (name === "style") return LOADING_CSS.test(value);
   if (!LOADING_ATTRIBUTES.has(name)) return false;
   return LINKS.has(el.localName) && name.endsWith("href") ? !isSafeLink(value) : !isSafeSource(value);
 }
 
-/** Remove blocked elements and unsafe attributes from everything under `root`. */
+/**
+ * Remove blocked elements, <style> elements whose CSS could load something (the renderer's CSS never
+ * does, and a test keeps it that way) and unsafe attributes from everything under `root`.
+ */
 function sanitize(root: ParentNode): void {
   for (const el of [...root.querySelectorAll("*")]) {
-    if (BLOCKED_ELEMENTS.has(el.localName)) {
+    if (BLOCKED_ELEMENTS.has(el.localName) || (el.localName === "style" && LOADING_CSS.test(el.textContent ?? ""))) {
       el.remove();
       continue;
     }
