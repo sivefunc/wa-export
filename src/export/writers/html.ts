@@ -18,6 +18,7 @@ export const htmlWriter: Writer = {
   wantsAvatars: true,
   // Base64 adds a third, and the browser opening the page holds all of it in memory.
   limits: { warnBytes: 200 * 1024 * 1024, maxBytes: 500 * 1024 * 1024, hint: "Select fewer large files, or export as ZIP." },
+  /** One self-contained HTML page: the chat in the chosen theme, with media and profile pictures inlined as base64. */
   async write(b, onProgress, settings) {
     const parts = renderChatHtml(b, { theme: settings?.theme });
     const blobOf = (p: Exclude<HtmlPart, string>) => (p.from === "media" ? b.media : b.avatars)?.get(p.key);

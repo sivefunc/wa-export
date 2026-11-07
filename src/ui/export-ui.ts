@@ -277,6 +277,10 @@ function motionAllowed(doc: Document): boolean {
   return typeof mq === "function" && !mq.call(doc.defaultView, "(prefers-reduced-motion: reduce)").matches;
 }
 
+/**
+ * Mount the Export UI (button, settings menu, progress and result panels) in a shadow root, placed in
+ * WhatsApp's selection toolbar next to Forward, or floating when the toolbar isn't there.
+ */
 export function mountExportUi(doc: Document, settingsAccess?: SettingsAccess, opts: { motion?: boolean } = {}): ExportUi {
   const motion = opts.motion ?? motionAllowed(doc);
   const host = doc.createElement("wa-export-ui");
