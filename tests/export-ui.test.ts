@@ -3,6 +3,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import type { Settings } from "../src/settings";
 import { mountExportUi } from "../src/ui/export-ui";
 import { findForwardButton } from "../src/ui/placement";
+import { spyOnHtmlParsing } from "./helpers/no-html-parsing";
 
 afterEach(() => {
   document.body.innerHTML = "";
@@ -136,6 +137,34 @@ describe("mountExportUi", () => {
     ui.setState({ kind: "error", message: "Can't read WhatsApp's messages. The extension needs an update." });
     expect(shadowOf().textContent).toContain("Can't read WhatsApp's messages. The extension needs an update.");
     expect(shadowOf().querySelector("button.dismiss")).not.toBeNull();
+  });
+});
+
+describe("no HTML parsing (Firefox Add-ons flags innerHTML)", () => {
+  it("draws every state and the settings menu without parsing HTML", async () => {
+    const parsing = spyOnHtmlParsing();
+    const ui = mountExportUi(document, {
+      load: async () => ({ format: "png", order: "date", longImages: "single", quality: "custom", customQuality: 75, theme: "auto" }),
+      save: async () => {},
+    });
+    ui.setState({ kind: "idle", count: 3 });
+    shadowOf().querySelector<HTMLButtonElement>("button.settings")!.click();
+    await new Promise((r) => setTimeout(r, 0));
+    shadowOf().querySelector<HTMLButtonElement>('[data-sub="quality"]')!.click();
+    ui.setState({ kind: "working", stage: "reading", done: 1, total: 3 });
+    ui.setState({ kind: "confirm", bytes: 600 * 1024 * 1024 });
+    ui.setState({ kind: "done", messages: 3, problems: ["x"] });
+    ui.setState({ kind: "error", message: "y" });
+    expect(parsing.calls()).toBe(0);
+    parsing.restore();
+  });
+
+  it("shows chat-derived text as text, never markup", () => {
+    const ui = mountExportUi(document);
+    const evil = 'report<img src=x onerror="alert(1)">.pdf';
+    ui.setState({ kind: "done", messages: 1, problems: [`File missing (${evil})`] });
+    expect(shadowOf().querySelector("img")).toBeNull();
+    expect(shadowOf().textContent).toContain(evil);
   });
 });
 

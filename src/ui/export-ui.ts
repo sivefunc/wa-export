@@ -1,6 +1,7 @@
 import { orderings } from "../export/orderings";
-import { writers } from "../export/writers";
+import { writerCatalog } from "../export/writers/catalog";
 import { CUSTOM_QUALITY, longImageChoices, qualityChoices, themeChoices, type Settings } from "../settings";
+import { builder, type Builder, type Child } from "./dom";
 import { findForwardButton, toolbarSlot } from "./placement";
 import { buttonLabel, progressFraction, type UiState } from "./state";
 
@@ -106,9 +107,6 @@ const ICONS = {
   caret: "M10 17V7l5 5-5 5Z",
   check: "M9.55 18 3.85 12.3l1.43-1.42 4.27 4.27 9.18-9.18 1.42 1.43L9.55 18Z",
 };
-const icon = (name: keyof typeof ICONS) => `<svg viewBox="0 0 24 24" aria-hidden="true"><path d="${ICONS[name]}"/></svg>`;
-
-const esc = (s: string) => s.replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c]!);
 
 type SettingName = Exclude<keyof Settings, "customQuality">;
 
@@ -130,7 +128,7 @@ const MENU: {
   value?: (s: Settings, current: Choice) => string; // the item's value text, when not just the choice's
   when?: (s: Settings) => boolean;
 }[] = [
-  { name: "format", text: "Format", icon: "format", choices: () => Object.values(writers).map((w) => ({ id: w.id, text: w.fileType, hint: w.description })) },
+  { name: "format", text: "Format", icon: "format", choices: () => Object.values(writerCatalog).map((w) => ({ id: w.id, text: w.fileType, hint: w.description })) },
   { name: "order", text: "Order", icon: "order", choices: () => Object.values(orderings).map((o) => ({ id: o.id, text: o.shortLabel, hint: o.label })) },
   {
     name: "theme",
@@ -173,61 +171,103 @@ interface Fx {
 
 const LEAVE_MS = 150;
 
-function menuHtml(m: MenuState, fx: Fx): string {
+/** The settings menu, with the open submenu (if any) under its item. */
+function menuNode(el: Builder, m: MenuState, fx: Fx): HTMLElement {
   const entries = MENU.filter((entry) => !entry.when || entry.when(m.settings)).map((entry) => {
     const choices = entry.choices(m.settings);
     const current = choices.find((c) => c.id === m.settings[entry.name]) ?? choices[0];
     const value = entry.value ? entry.value(m.settings, current) : current.text;
     // Custom quality: a percentage slider under the options while it's the chosen one.
     const slider =
-      entry.name === "quality" && m.settings.quality === "custom"
-        ? `<div class="custom-row"><input type="range" class="custom-range" aria-label="Custom quality, percent" min="${CUSTOM_QUALITY.min}" max="${CUSTOM_QUALITY.max}" step="${CUSTOM_QUALITY.step}" value="${m.settings.customQuality}"><span class="custom-value">${m.settings.customQuality}%</span></div>`
-        : "";
+      entry.name === "quality" &&
+      m.settings.quality === "custom" &&
+      el(
+        "div",
+        { class: "custom-row" },
+        el("input", {
+          type: "range",
+          class: "custom-range",
+          "aria-label": "Custom quality, percent",
+          min: CUSTOM_QUALITY.min,
+          max: CUSTOM_QUALITY.max,
+          step: CUSTOM_QUALITY.step,
+          value: m.settings.customQuality,
+        }),
+        el("span", { class: "custom-value" }, `${m.settings.customQuality}%`),
+      );
     const open = m.sub === entry.name;
-    const sub = open
-      ? `<div class="submenu${fx.sub ? ` ${fx.sub}` : ""}" role="menu" aria-label="${esc(entry.text)}">${choices
-          .map((c) => {
-            const checked = c.id === current?.id;
-            return `<button class="item option" role="menuitemradio" aria-checked="${checked}" data-setting="${entry.name}" data-value="${esc(c.id)}">
-              <span class="icon">${checked ? icon("check") : ""}</span>
-              <span class="label"><span class="text">${esc(c.text)}</span><span class="hint">${esc(c.hint)}</span></span></button>`;
-          })
-          .join("")}${slider}</div>`
-      : "";
-    return `<div class="has-sub"><button class="item" role="menuitem" aria-haspopup="menu" aria-expanded="${open}" data-sub="${entry.name}">
-      <span class="icon">${icon(entry.icon)}</span><span class="text">${esc(entry.text)}</span>
-      <span class="value">${esc(value)}</span><span class="caret">${icon("caret")}</span></button>${sub}</div>`;
-  }).join("");
-  return `<div class="menu${fx.menu ? ` ${fx.menu}` : ""}" role="menu" aria-label="Export settings">${entries}</div>`;
+    const sub =
+      open &&
+      el(
+        "div",
+        { class: classes("submenu", fx.sub), role: "menu", "aria-label": entry.text },
+        choices.map((c) => {
+          const checked = c.id === current?.id;
+          return el(
+            "button",
+            { class: "item option", role: "menuitemradio", "aria-checked": String(checked), "data-setting": entry.name, "data-value": c.id },
+            el("span", { class: "icon" }, checked && el.icon(ICONS.check)),
+            el("span", { class: "label" }, el("span", { class: "text" }, c.text), el("span", { class: "hint" }, c.hint)),
+          );
+        }),
+        slider,
+      );
+    return el(
+      "div",
+      { class: "has-sub" },
+      el(
+        "button",
+        { class: "item", role: "menuitem", "aria-haspopup": "menu", "aria-expanded": String(open), "data-sub": entry.name },
+        el("span", { class: "icon" }, el.icon(ICONS[entry.icon])),
+        el("span", { class: "text" }, entry.text),
+        el("span", { class: "value" }, value),
+        el("span", { class: "caret" }, el.icon(ICONS.caret)),
+      ),
+      sub,
+    );
+  });
+  return el("div", { class: classes("menu", fx.menu), role: "menu", "aria-label": "Export settings" }, entries);
 }
 
-function render(s: UiState, gear: boolean, menu: MenuState | null, fx: Fx): string {
-  const label = esc(buttonLabel(s));
-  const panel = `panel${fx.panel ? ` ${fx.panel}` : ""}`;
+/** Join class names, skipping empty ones. */
+const classes = (...names: (string | false | undefined)[]) => names.filter(Boolean).join(" ");
+
+/** The UI for state `s`: the Export button (with the gear and menu while idle), progress, or a panel. */
+function render(el: Builder, s: UiState, gear: boolean, menu: MenuState | null, fx: Fx): Child[] {
+  const label = buttonLabel(s);
+  const panel = (extra: string | false, ...children: Child[]) => el("div", { class: classes("panel", fx.panel, extra) }, el("p", {}, label), ...children);
+  const okRow = () => el("div", { class: "row" }, el("button", { class: "secondary dismiss" }, "OK"));
   switch (s.kind) {
     case "hidden":
-      return "";
+      return [];
     case "idle": {
       const expanded = !!menu && !menu.leaving;
-      const settings = gear
-        ? `<button class="settings${fx.gear ? ` ${fx.gear}` : ""}" aria-label="Export settings" title="Export settings" aria-haspopup="menu" aria-expanded="${expanded}">${icon("settings")}</button>`
-        : "";
-      return `${menu ? menuHtml(menu, fx) : ""}<div class="buttons"><button class="export">${label}</button>${settings}</div>`;
+      const settings =
+        gear &&
+        el(
+          "button",
+          { class: classes("settings", fx.gear), "aria-label": "Export settings", title: "Export settings", "aria-haspopup": "menu", "aria-expanded": String(expanded) },
+          el.icon(ICONS.settings),
+        );
+      return [menu && menuNode(el, menu, fx), el("div", { class: "buttons" }, el("button", { class: "export" }, label), settings)];
     }
     case "working": {
       const pct = Math.round((progressFraction(s) ?? 0) * 100);
-      return `<button class="export" disabled><span class="bar" role="progressbar" aria-valuemin="0" aria-valuemax="100"
-        aria-valuenow="${pct}" style="width: ${pct}%"></span><span class="label">${label}</span></button>`;
+      return [
+        el(
+          "button",
+          { class: "export", disabled: true },
+          el("span", { class: "bar", role: "progressbar", "aria-valuemin": 0, "aria-valuemax": 100, "aria-valuenow": pct, style: `width: ${pct}%` }),
+          el("span", { class: "label" }, label),
+        ),
+      ];
     }
     case "confirm":
-      return `<div class="${panel}"><p>${label}</p><div class="row">
-        <button class="secondary cancel">Cancel</button><button class="export continue">Continue</button></div></div>`;
-    case "done": {
-      const list = s.problems.length ? `<ul>${s.problems.map((p) => `<li>${esc(p)}</li>`).join("")}</ul>` : "";
-      return `<div class="${panel}"><p>${label}</p>${list}<div class="row"><button class="secondary dismiss">OK</button></div></div>`;
-    }
+      return [panel(false, el("div", { class: "row" }, el("button", { class: "secondary cancel" }, "Cancel"), el("button", { class: "export continue" }, "Continue")))];
+    case "done":
+      return [panel(false, s.problems.length > 0 && el("ul", {}, s.problems.map((p) => el("li", {}, p))), okRow())];
     case "error":
-      return `<div class="${panel} error"><p>${label}</p><div class="row"><button class="secondary dismiss">OK</button></div></div>`;
+      return [panel("error", okRow())];
   }
 }
 
@@ -237,10 +277,16 @@ function motionAllowed(doc: Document): boolean {
   return typeof mq === "function" && !mq.call(doc.defaultView, "(prefers-reduced-motion: reduce)").matches;
 }
 
+/**
+ * Mount the Export UI (button, settings menu, progress and result panels) in a shadow root, placed in
+ * WhatsApp's selection toolbar next to Forward, or floating when the toolbar isn't there.
+ */
 export function mountExportUi(doc: Document, settingsAccess?: SettingsAccess, opts: { motion?: boolean } = {}): ExportUi {
   const motion = opts.motion ?? motionAllowed(doc);
   const host = doc.createElement("wa-export-ui");
   const shadow = host.attachShadow({ mode: "open" });
+  const el = builder(doc);
+  const style = el("style", {}, STYLE);
   const handlers = { export: () => {}, confirm: (_ok: boolean) => {}, dismiss: () => {} };
   let state: UiState = { kind: "hidden" };
   let drawn = "";
@@ -251,9 +297,14 @@ export function mountExportUi(doc: Document, settingsAccess?: SettingsAccess, op
 
   const focus = (selector: string) => shadow.querySelector<HTMLElement>(selector)?.focus();
 
+  /** Draw the current state; redraws only when the output changes, so focus and animations survive no-op updates. */
   const draw = (fx: Fx = {}) => {
-    const html = `<style>${STYLE}</style><div class="wrap">${render(state, !!settingsAccess, menu, motion ? fx : {})}</div>`;
-    if (html !== drawn) shadow.innerHTML = drawn = html;
+    const wrap = el("div", { class: "wrap" }, render(el, state, !!settingsAccess, menu, motion ? fx : {}));
+    const key = wrap.outerHTML;
+    if (key !== drawn) {
+      drawn = key;
+      shadow.replaceChildren(style, wrap);
+    }
     host.hidden = state.kind === "hidden";
     place();
   };

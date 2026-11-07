@@ -1,5 +1,6 @@
 import { exportFilename } from "../naming";
 import { renderChatHtml, type HtmlPart } from "../render-chat-html";
+import { writerCatalog } from "./catalog";
 import type { Writer } from "./index";
 
 // Base64 per block: a multiple of 3 bytes so blocks concatenate, and small enough that no single string
@@ -13,13 +14,11 @@ function base64(bytes: Uint8Array): string {
 }
 
 export const htmlWriter: Writer = {
-  id: "html",
-  label: "HTML (WhatsApp look, opens in any browser)",
-  fileType: "HTML",
-  description: "Looks like WhatsApp, in any browser",
+  ...writerCatalog.html,
   wantsAvatars: true,
   // Base64 adds a third, and the browser opening the page holds all of it in memory.
   limits: { warnBytes: 200 * 1024 * 1024, maxBytes: 500 * 1024 * 1024, hint: "Select fewer large files, or export as ZIP." },
+  /** One self-contained HTML page: the chat in the chosen theme, with media and profile pictures inlined as base64. */
   async write(b, onProgress, settings) {
     const parts = renderChatHtml(b, { theme: settings?.theme });
     const blobOf = (p: Exclude<HtmlPart, string>) => (p.from === "media" ? b.media : b.avatars)?.get(p.key);

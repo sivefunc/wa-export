@@ -2,14 +2,12 @@ import { MAX_BYTES, WARN_BYTES } from "../collect";
 import { exportFilename } from "../naming";
 import { renderChatMd } from "../render-chat-md";
 import { renderMessagesJson } from "../render-json";
+import { writerCatalog } from "./catalog";
 import type { Writer } from "./index";
 import { buildZip, type ZipEntry } from "./zip-archive";
 
 export const zipWriter: Writer = {
-  id: "zip",
-  label: "ZIP (chat.md + messages.json + media/)",
-  fileType: "ZIP",
-  description: "Markdown + files, for Claude Code",
+  ...writerCatalog.zip,
   limits: { warnBytes: WARN_BYTES, maxBytes: MAX_BYTES, hint: "Select fewer large files." },
   /** chat.md and messages.json (deflated) plus every media file (stored), in one ZIP. */
   async write(b, onProgress) {

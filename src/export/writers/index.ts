@@ -4,20 +4,18 @@ import type { SizeLimits } from "../collect";
 import { htmlWriter } from "./html";
 import { jpegWriter, pdfWriter, pngWriter } from "./image";
 import { zipWriter } from "./zip";
+import { DEFAULT_WRITER, type WriterId, type WriterInfo } from "./catalog";
 
-export interface Writer {
-  id: string;
-  label: string;
-  fileType: string; // short name for progress and the settings menu, e.g. "ZIP"
-  description: string; // one line under fileType in the settings menu
+export { DEFAULT_WRITER } from "./catalog";
+
+export interface Writer extends WriterInfo {
   limits: SizeLimits;
   wantsAvatars?: boolean; // collect profile pictures into bundle.avatars
   write(b: ExportBundle, onProgress?: (percent: number) => void, settings?: Settings): Promise<{ blob: Blob; filename: string }>;
 }
 
-export const writers: Record<string, Writer> = { zip: zipWriter, html: htmlWriter, pdf: pdfWriter, png: pngWriter, jpeg: jpegWriter };
-
-export const DEFAULT_WRITER = "zip";
+/** Every format, in the catalog's order (the order the settings list them). */
+export const writers: Record<WriterId, Writer> & Record<string, Writer | undefined> = { zip: zipWriter, html: htmlWriter, pdf: pdfWriter, png: pngWriter, jpeg: jpegWriter };
 
 export function getWriter(id: string): Writer {
   return writers[id] ?? writers[DEFAULT_WRITER];

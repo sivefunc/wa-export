@@ -170,6 +170,10 @@ export async function layOut(doc: Document, b: ExportBundle, media: Awaited<Retu
   host.dir = "ltr"; // the render is left-to-right; don't inherit an RTL page direction while measuring
   host.style.cssText = `position:fixed;left:-100000px;top:0;width:${PAGE_WIDTH}px;pointer-events:none;contain:layout paint`;
   const shadow = host.attachShadow({ mode: "closed" });
+  // innerHTML on purpose: this is the same renderer as the HTML export, which escapes all chat text
+  // (src/export/wa-html.ts) and emits no scripts or event handlers; WhatsApp's page CSP also blocks
+  // inline handlers (script-src has no 'unsafe-inline', checked 2026-11-06). The layout must be live
+  // in the page to be measured.
   shadow.innerHTML = `<style>${css}</style><div class="wa" style="width:${PAGE_WIDTH}px">${pieces.header}<main class="chat">${pieces.blocks.join("")}${pieces.end}</main></div>`;
   doc.body.append(host);
   try {
@@ -200,6 +204,7 @@ export async function rasterize(doc: Document, laid: LaidOut, slice: Slice, scal
   const scratch = doc.implementation.createHTMLDocument("");
   // A block cut by the slice (taller than a page) must not spill below it.
   const clip = Math.min(height, slice.y1 - slice.y0);
+  // A detached document: parsing here runs no scripts and loads nothing. The blocks come from layOut.
   scratch.body.innerHTML = `<div class="wa" style="position:relative;width:${laid.width}px;height:${height}px"><style>${laid.css}</style><div style="position:absolute;inset:0 0 auto 0;height:${clip}px;overflow:hidden">${slots}</div></div>`;
   const xhtml = new XMLSerializer().serializeToString(scratch.body.firstElementChild!);
   const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${laid.width}" height="${height}"><foreignObject x="0" y="0" width="100%" height="100%">${xhtml}</foreignObject></svg>`;
