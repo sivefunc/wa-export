@@ -6,7 +6,7 @@
 
 Select messages in WhatsApp Web the way you would to forward them, click **Export**, and save them as a **ZIP**, an **HTML** page, a **PDF** or an **image**. For sharing a conversation with people, or handing it to a coding agent.
 
-Chrome/Chromium 111+ and Firefox 128+. Everything runs locally; see [PRIVACY.md](PRIVACY.md).
+Chrome/Chromium 111+, Firefox 140+ on desktop and Firefox 142+ on Android. Everything runs locally; see [PRIVACY.md](PRIVACY.md).
 
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="docs/images/whatsapp-menu-dark.png">

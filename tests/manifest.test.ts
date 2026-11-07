@@ -13,6 +13,14 @@ describe.each(["chrome-mv3", "firefox-mv3"])("%s manifest", (target) => {
     expect(m.host_permissions ?? []).toEqual([]);
   });
 
+  it("includes every extension icon size and its packaged file", () => {
+    const m = readManifest(target);
+    for (const size of [16, 32, 48, 96, 128]) {
+      expect(m.icons?.[size]).toBe(`icon/${size}.png`);
+      expect(existsSync(`.output/${target}/${m.icons[size]}`)).toBe(true);
+    }
+  });
+
   it("loads bundled WA-JS first in the MAIN world at document_start", () => {
     const m = readManifest(target);
     const main = m.content_scripts.find((c: any) => c.world === "MAIN");
@@ -40,10 +48,14 @@ describe("browser-specific keys", () => {
     expect(readManifest("chrome-mv3").minimum_chrome_version).toBe("111");
   });
 
-  it("firefox has a fixed id and requires Firefox 128", () => {
+  it("firefox has a fixed id and requires Firefox 140 (data_collection_permissions)", () => {
     const gecko = readManifest("firefox-mv3").browser_specific_settings.gecko;
     expect(gecko.id).toBe("sivefunc@gmail.com");
-    expect(gecko.strict_min_version).toBe("128.0");
+    expect(gecko.strict_min_version).toBe("140.0");
+  });
+
+  it("firefox for android requires 142, where data_collection_permissions arrived", () => {
+    expect(readManifest("firefox-mv3").browser_specific_settings.gecko_android).toEqual({ strict_min_version: "142.0" });
   });
 
   it("firefox declares that no data is collected", () => {

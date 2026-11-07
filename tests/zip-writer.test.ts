@@ -1,11 +1,11 @@
-import JSZip from "jszip";
+import { unzipSync, type UnzipFileInfo } from "fflate";
 import { describe, expect, it, vi } from "vitest";
 import { DEFAULT_WRITER, getWriter, writers } from "../src/export/writers";
 import type { ExportBundle } from "../src/types";
 import { media, record } from "./fixtures/messages";
 
-const STORE = "\x00\x00";
-const DEFLATE = "\x08\x00";
+const STORE = 0;
+const DEFLATE = 8;
 
 function bundle(): ExportBundle {
   const bytes = new Uint8Array([0xff, 0xd8, 0xff, 0xe0, 1, 2, 3]);
@@ -22,12 +22,17 @@ function bundle(): ExportBundle {
   };
 }
 
+/** Run the ZIP writer and unpack its output, recording each entry's compression method. */
 async function open(b: ExportBundle) {
   const { blob, filename } = await getWriter("zip").write(b);
-  return { zip: await JSZip.loadAsync(await blob.arrayBuffer()), filename, blob };
+  const methods: Record<string, number> = {};
+  const files = unzipSync(new Uint8Array(await blob.arrayBuffer()), {
+    filter: (f: UnzipFileInfo) => ((methods[f.name] = f.compression), true),
+  });
+  return { files, methods, filename, blob };
 }
 
-const compressionOf = (zip: JSZip, path: string) => (zip.file(path) as any)._data.compression.magic;
+const text = (bytes: Uint8Array) => new TextDecoder().decode(bytes);
 
 describe("zip writer", () => {
   it("is the default and is registered", () => {
@@ -38,24 +43,20 @@ describe("zip writer", () => {
   });
 
   it("zip contains chat.md, messages.json and every media path", async () => {
-    const { zip } = await open(bundle());
-    expect(Object.keys(zip.files).filter((p) => !zip.files[p].dir).sort()).toEqual(
-      ["chat.md", "media/001-photo.jpg", "messages.json"].sort(),
-    );
-    expect(await zip.file("chat.md")!.async("string")).toContain("![](media/001-photo.jpg)");
-    expect(JSON.parse(await zip.file("messages.json")!.async("string")).schemaVersion).toBe(1);
+    const { files } = await open(bundle());
+    expect(Object.keys(files).sort()).toEqual(["chat.md", "media/001-photo.jpg", "messages.json"].sort());
+    expect(text(files["chat.md"])).toContain("![](media/001-photo.jpg)");
+    expect(JSON.parse(text(files["messages.json"])).schemaVersion).toBe(1);
   });
 
   it("media entries are STORE, chat.md and messages.json are DEFLATE", async () => {
-    const { zip } = await open(bundle());
-    expect(compressionOf(zip, "media/001-photo.jpg")).toBe(STORE);
-    expect(compressionOf(zip, "chat.md")).toBe(DEFLATE);
-    expect(compressionOf(zip, "messages.json")).toBe(DEFLATE);
+    const { methods } = await open(bundle());
+    expect(methods).toEqual({ "chat.md": DEFLATE, "messages.json": DEFLATE, "media/001-photo.jpg": STORE });
   });
 
   it("media bytes round-trip unchanged", async () => {
-    const { zip } = await open(bundle());
-    expect([...(await zip.file("media/001-photo.jpg")!.async("uint8array"))]).toEqual([0xff, 0xd8, 0xff, 0xe0, 1, 2, 3]);
+    const { files } = await open(bundle());
+    expect([...files["media/001-photo.jpg"]]).toEqual([0xff, 0xd8, 0xff, 0xe0, 1, 2, 3]);
   });
 
   it("filename comes from exportFilename and the blob is a zip", async () => {
@@ -71,18 +72,19 @@ describe("zip writer", () => {
     expect(seen).toEqual([...seen].sort((a, b) => a - b));
   });
 
-  it("hands JSZip own-realm byte copies, never Blobs or page buffers (Firefox)", async () => {
-    // Firefox content scripts: buffers from the page (postMessage, Blob reads) deny
-    // `.constructor` to JSZip, which then hangs at 33% without an error.
-    // A structuredClone made in the content script works.
-    const file = vi.spyOn(JSZip.prototype, "file");
-    const clone = vi.spyOn(globalThis, "structuredClone");
-    await getWriter("zip").write(bundle());
-    const media = file.mock.calls.find(([path]) => path === "media/001-photo.jpg")!;
-    expect(media[1]).toBeInstanceOf(Uint8Array);
-    expect(clone).toHaveBeenCalledWith(expect.any(ArrayBuffer));
-    file.mockRestore();
-    clone.mockRestore();
+  it("copies media bytes into the content script's realm before zipping (Firefox)", async () => {
+    // Firefox content scripts: buffers from the page (postMessage, Blob reads) deny `.constructor`
+    // to libraries. A structuredClone made in the content script is our own.
+    // The "copy" holds different bytes, so the ZIP shows whether the writer used it.
+    const copied = new Uint8Array([9, 8, 7]).buffer;
+    const clone = vi.spyOn(globalThis, "structuredClone").mockReturnValue(copied);
+    try {
+      const { files } = await open(bundle());
+      expect(clone).toHaveBeenCalledWith(expect.any(ArrayBuffer));
+      expect([...files["media/001-photo.jpg"]]).toEqual([9, 8, 7]);
+    } finally {
+      clone.mockRestore();
+    }
   });
 
   it("unknown writer id falls back to zip", () => {
