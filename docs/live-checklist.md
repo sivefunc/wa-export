@@ -8,6 +8,7 @@ WhatsApp Web 2.3000.1051605128 · WA-JS 4.7.2 · tested 2026-10-24 on the owner'
 | Select mode detected, ticks tracked | ✅ | ✅ | tracked count matches WhatsApp's "N selected" (3, 4, 5, 6) |
 | Selection spanning a long scroll | ✅ | | 5 ids tracked after scrolling up 12 screens |
 | Selection survives scrolling with 48 rows loaded | ✅ | | 2026-11-06: 14 ticked (images, voice notes, a document, texts); 90 samples while scrolling, WhatsApp's "14 selected" = "Export 14" every time; ZIP with 11 media files, no problems |
+| Escape in the settings menu keeps the selection | ✅ | | 2026-11-06: WhatsApp has keydown capture listeners on window and document. Escape closes the submenu, then the menu, with "1 selected" kept; with the menu closed, Escape cancels the selection as before |
 | Leaving select mode clears | ✅ | | "Cancel selection" → `{active:false, ids:[]}` |
 | Export button placement | ✅ | ✅ | in the toolbar right after Forward; summary panel above it |
 | Nothing selected | ✅ | | "Select at least one message first." |
