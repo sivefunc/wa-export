@@ -24,10 +24,13 @@ https://github.com/sivefunc/wa-export
 
 The output is `.output/firefox-mv3/`, which matches the uploaded package.
 
-**Third-party code**, unmodified:
+**Third-party code:**
 
 - `vendor/wppconnect-wa.js` is `dist/wppconnect-wa.js` from npm `@wppconnect/wa-js` 4.7.2
-  (Apache-2.0, https://github.com/wppconnect-team/wa-js), copied by `wxt.config.ts`. It runs in the
+  (Apache-2.0, https://github.com/wppconnect-team/wa-js), copied by `wxt.config.ts` with one change:
+  `scripts/build/vendor-wa-js.ts` replaces a Node-only `eval("require")("stream")` in its file-type
+  detection with the `ReferenceError` that eval throws in a browser, so behaviour is unchanged and the
+  file has no eval. A notice at the top of the file says so. It runs in the
   page (MAIN world) because it reads WhatsApp Web's internal message store, which is the only way to
   get the selected messages and their media without scraping or re-downloading them. Our page-world
   code (`src/page/`) answers read-only requests from the content script and blocks WhatsApp's request
@@ -36,9 +39,6 @@ The output is `.output/firefox-mv3/`, which matches the uploaded package.
 
 **Validator warnings:**
 
-- *eval can be harmful* in `vendor/wppconnect-wa.js`: WA-JS's file-type detection includes a helper
-  for Node.js streams that calls `eval("require")("stream")`. It only runs when given a Node stream,
-  which never happens in a browser. The file is unmodified, so we can't remove it.
 - *Unsafe assignment to innerHTML* (2) in `content-scripts/wa-export.js`, from
   `src/export/raster/dom.ts`. The PNG/PDF export lays the chat out from the same renderer as the
   HTML export (`src/export/render-chat-html.ts`), which escapes all message text
