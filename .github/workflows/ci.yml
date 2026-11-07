@@ -4,6 +4,7 @@ on:
   push:
     branches: [main]
   pull_request:
+  workflow_call: # the release workflow runs every check before uploading
 
 # CI only reads the repo; the job token gets nothing more.
 permissions:

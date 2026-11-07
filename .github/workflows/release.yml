@@ -1,0 +1,89 @@
+name: Release
+
+# Push a version tag to upload to Firefox Add-ons (and the Chrome Web Store once the
+# CHROME_EXTENSION_ID variable is set) and attach the packages to a GitHub Release.
+# Run it by hand to check the store keys without uploading anything. Setup: docs/releasing.md.
+on:
+  push:
+    tags: ["v*"]
+  workflow_dispatch: # always a dry run
+
+permissions:
+  contents: read
+
+concurrency:
+  group: release
+  cancel-in-progress: false
+
+jobs:
+  checks:
+    uses: ./.github/workflows/ci.yml
+
+  publish:
+    needs: checks
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    # Store keys live only in this environment; give it a required reviewer so nothing ships unapproved.
+    environment: stores
+    permissions:
+      contents: write # create the GitHub Release
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: 24
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+
+      - name: Read the version
+        id: version
+        run: echo "version=$(node -p 'require("./package.json").version')" >> "$GITHUB_OUTPUT"
+
+      - name: Check the tag matches package.json
+        if: github.ref_type == 'tag'
+        env:
+          VERSION: ${{ steps.version.outputs.version }}
+        run: |
+          if [ "$GITHUB_REF_NAME" != "v$VERSION" ]; then
+            echo "::error::Tag $GITHUB_REF_NAME doesn't match package.json version $VERSION"
+            exit 1
+          fi
+
+      - run: pnpm build
+      - run: pnpm zip
+
+      - name: Upload to the stores
+        env:
+          VERSION: ${{ steps.version.outputs.version }}
+          CHROME_EXTENSION_ID: ${{ vars.CHROME_EXTENSION_ID }}
+          CHROME_CLIENT_ID: ${{ secrets.CHROME_CLIENT_ID }}
+          CHROME_CLIENT_SECRET: ${{ secrets.CHROME_CLIENT_SECRET }}
+          CHROME_REFRESH_TOKEN: ${{ secrets.CHROME_REFRESH_TOKEN }}
+          FIREFOX_EXTENSION_ID: ${{ vars.FIREFOX_EXTENSION_ID }}
+          FIREFOX_JWT_ISSUER: ${{ secrets.FIREFOX_JWT_ISSUER }}
+          FIREFOX_JWT_SECRET: ${{ secrets.FIREFOX_JWT_SECRET }}
+        run: |
+          args=(--firefox-zip ".output/wa-export-$VERSION-firefox.zip" --firefox-sources-zip ".output/wa-export-$VERSION-sources.zip")
+          # Chrome joins once its listing exists and the CHROME_EXTENSION_ID variable is set.
+          if [ -n "$CHROME_EXTENSION_ID" ]; then
+            args+=(--chrome-zip ".output/wa-export-$VERSION-chrome.zip")
+          else
+            echo "::notice::CHROME_EXTENSION_ID isn't set, so this release skips the Chrome Web Store."
+          fi
+          # Without a tag (a manual run), only check the keys.
+          if [ "$GITHUB_REF_TYPE" != "tag" ]; then args+=(--dry-run); fi
+          pnpm exec wxt submit "${args[@]}"
+
+      - name: Create the GitHub Release
+        if: github.ref_type == 'tag'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          VERSION: ${{ steps.version.outputs.version }}
+        run: |
+          gh release create "$GITHUB_REF_NAME" --verify-tag --generate-notes \
+            ".output/wa-export-$VERSION-chrome.zip" \
+            ".output/wa-export-$VERSION-firefox.zip" \
+            ".output/wa-export-$VERSION-sources.zip"

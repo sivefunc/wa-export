@@ -97,7 +97,7 @@ WA-JS runs inside your WhatsApp session with full access, so treat upgrades as a
 
 ### Store submission
 
-The manifest name is a placeholder: WhatsApp is Meta's trademark, so the public name must not start with "WhatsApp" and must not use its logo. Pick the final name before submitting. Firefox submissions need the sources ZIP that `pnpm zip` creates.
+The manifest name is a placeholder: WhatsApp is Meta's trademark, so the public name must not start with "WhatsApp" and must not use its logo. Pick the final name before submitting. Firefox submissions need the sources ZIP that `pnpm zip` creates. Releases after the first are automatic: see [docs/releasing.md](docs/releasing.md).
 
 ## License
 
