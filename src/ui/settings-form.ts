@@ -3,6 +3,7 @@ import { writerCatalog } from "../export/writers/catalog";
 import { CUSTOM_QUALITY, longImageChoices, qualityChoices, themeChoices, type Settings } from "../settings";
 import type { Builder } from "./dom";
 
+/** A labelled <select> with one option per entry, `value` preselected. */
 function select(el: Builder, name: keyof Settings, label: string, entries: { id: string; label: string }[], value: string): HTMLElement {
   const options = entries.map((e) => el("option", { value: e.id, selected: e.id === value }, e.label));
   return el("label", {}, label, el("select", { name }, options));

@@ -10,6 +10,7 @@ export interface Builder {
   icon(path: string): SVGSVGElement;
 }
 
+/** Set each attribute as data: true → empty attribute; false, null and undefined are left out. */
 function setAttrs(el: Element, attrs: Attrs): void {
   for (const [name, value] of Object.entries(attrs)) {
     if (value === false || value === null || value === undefined) continue;
@@ -17,6 +18,7 @@ function setAttrs(el: Element, attrs: Attrs): void {
   }
 }
 
+/** Append children in order, flattening arrays, turning strings into text nodes and skipping empty ones. */
 function appendAll(parent: Node, children: Child[]): void {
   for (const child of children) {
     if (Array.isArray(child)) appendAll(parent, child);

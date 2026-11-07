@@ -293,7 +293,7 @@ export function mountExportUi(doc: Document, settingsAccess?: SettingsAccess, op
 
   const focus = (selector: string) => shadow.querySelector<HTMLElement>(selector)?.focus();
 
-  // Redraw only when the output changes, so focus and running animations survive no-op updates.
+  /** Draw the current state; redraws only when the output changes, so focus and animations survive no-op updates. */
   const draw = (fx: Fx = {}) => {
     const wrap = el("div", { class: "wrap" }, render(el, state, !!settingsAccess, menu, motion ? fx : {}));
     const key = wrap.outerHTML;
