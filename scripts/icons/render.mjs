@@ -1,11 +1,11 @@
 // Re-render committed toolbar/store icons: pnpm icons
 // First-time setup: pnpm exec playwright install chromium
-import { mkdir, readFile } from 'node:fs/promises';
-import { fileURLToPath } from 'node:url';
-import { chromium } from 'playwright';
+import { mkdir, readFile } from "node:fs/promises";
+import { fileURLToPath } from "node:url";
+import { chromium } from "playwright";
 
-const source = await readFile(new URL('../../assets/icon.svg', import.meta.url), 'utf8');
-const output = new URL('../../public/icon/', import.meta.url);
+const source = await readFile(new URL("../../assets/icon.svg", import.meta.url), "utf8");
+const output = new URL("../../public/icon/", import.meta.url);
 await mkdir(output, { recursive: true });
 const browser = await chromium.launch({ headless: true });
 try {
