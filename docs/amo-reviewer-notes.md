@@ -7,8 +7,14 @@ version numbers when WA-JS or fflate change.
 
 **What it does.** In WhatsApp Web's own "Select messages" mode, the add-on adds an Export button. It
 reads only the selected messages and their files and saves them as one file: a ZIP, an HTML page, a
-PDF or an image. Everything runs locally. It has no background script, no network code of its own and
-no analytics, and its only permission is `storage` (export settings). Source:
+PDF or an image. Everything runs locally. It has no background script and no analytics, and its only
+permission is `storage` (export settings). Selected media that WhatsApp Web hasn't cached yet is
+downloaded by WhatsApp Web's own code (through WA-JS), as when you open it. The add-on's only request
+of its own: for the HTML, PDF, PNG and JPEG
+formats (not ZIP), the page-world code fetches the small profile pictures of the chat and of the
+selected messages' senders, the ones WhatsApp Web shows in its chat list. `src/page/handlers.ts`
+(`GET_AVATARS`) only fetches `https://` URLs on `whatsapp.net` or its subdomains, without cookies or
+referrer, with a 10-second timeout and a 1 MB limit per picture. Source:
 https://github.com/sivefunc/wa-export
 
 **Build from the attached sources** (Node 22.12+, pnpm 10.29.2 through `corepack enable`):
