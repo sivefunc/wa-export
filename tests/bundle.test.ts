@@ -13,10 +13,10 @@ function scripts(target: string): [string, string][] {
 
 describe.each(["chrome-mv3", "firefox-mv3"])("%s bundle", (target) => {
   // Firefox Add-ons lints every file in the package, loaded or not.
-  it("the settings page ships no export code: the only innerHTML is the PNG/PDF layout in the content script", () => {
+  it("nothing assigns innerHTML: the UI builds DOM and the PNG/PDF layout parses with DOMParser", () => {
     const withInnerHtml = scripts(target)
-      .filter(([, src]) => /\.innerHTML\s*=/.test(src))
+      .filter(([, src]) => /\.(inner|outer)HTML\s*=(?!=)/.test(src))
       .map(([f]) => f);
-    expect(withInnerHtml).toEqual(["content-scripts/wa-export.js"]);
+    expect(withInnerHtml).toEqual([]);
   });
 });
