@@ -25,6 +25,7 @@ writeFileSync(join(ext, "assets.js"), `globalThis.__waDemoAssets = ${JSON.string
 
 // An .xpi is a zip of the add-on folder (built with fflate so it works on any OS).
 const xpiFiles = {};
+/** Add every file under `dir` to the .xpi, named relative to the extension folder with / separators. */
 const addDir = (dir) => {
   for (const entry of readdirSync(dir, { withFileTypes: true })) {
     const full = join(dir, entry.name);

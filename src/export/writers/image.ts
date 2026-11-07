@@ -32,6 +32,7 @@ function progress(onProgress?: (pct: number) => void) {
 export const TOO_LONG =
   "This chat is too long for one image. Turn on ⚙ → Long images → Split into parts, or select fewer messages.";
 
+/** A PNG or JPEG writer: one image of the chat, or (Long images → Split) a ZIP of parts cut between messages. */
 function imageWriter(id: "png" | "jpeg"): Writer {
   const type = id === "png" ? "image/png" : "image/jpeg";
   const ext = id === "png" ? "png" : "jpg";
@@ -80,6 +81,7 @@ export const jpegWriter = imageWriter("jpeg");
 // A4 portrait; one page shows PAGE_HEIGHT CSS px of the 900px-wide chat.
 const A4 = { widthPt: 595.28, heightPt: 841.89 };
 
+/** A4 PDF: each page is a JPEG of a slice of the chat, with an invisible text layer for search and copy. */
 export const pdfWriter: Writer = {
   id: "pdf",
   label: "PDF (WhatsApp look, searchable)",

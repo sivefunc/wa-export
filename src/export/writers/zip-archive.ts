@@ -21,6 +21,7 @@ export async function buildZip(entries: ZipEntry[], onProgress?: (pct: number) =
   const total = files.reduce((n, f) => n + f.bytes.length, 0);
   const parts: Uint8Array[] = [];
   let failure: Error | null = null;
+  // fflate hands over the archive in chunks as it goes; keep them, or the first error.
   const zip = new Zip((err, chunk) => {
     if (err) failure = err;
     else parts.push(chunk);
@@ -28,6 +29,7 @@ export async function buildZip(entries: ZipEntry[], onProgress?: (pct: number) =
 
   let done = 0;
   let last = -1;
+  /** Report whole percentages of input bytes added so far, each once. */
   const report = () => {
     const pct = total ? Math.floor((done / total) * 100) : 100;
     if (pct > last) onProgress?.((last = pct));

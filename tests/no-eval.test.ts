@@ -8,7 +8,7 @@ describe.each(["chrome-mv3", "firefox-mv3"])("%s bundle", (target) => {
     const root = `.output/${target}`;
     const offenders = readdirSync(root, { recursive: true, encoding: "utf8" })
       .filter((f) => f.endsWith(".js") && !f.startsWith("vendor/"))
-      .filter((f) => /\beval\(|\bnew Function\(|[^.\w]Function\(["'`]/.test(readFileSync(join(root, f), "utf8")));
+      .filter((f) => /\beval\(|\bnew Function\(|(?<![\w$])Function\(/.test(readFileSync(join(root, f), "utf8")));
     expect(offenders).toEqual([]);
   });
 });

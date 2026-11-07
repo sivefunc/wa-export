@@ -75,10 +75,16 @@ describe("zip writer", () => {
   it("copies media bytes into the content script's realm before zipping (Firefox)", async () => {
     // Firefox content scripts: buffers from the page (postMessage, Blob reads) deny `.constructor`
     // to libraries. A structuredClone made in the content script is our own.
-    const clone = vi.spyOn(globalThis, "structuredClone");
-    await getWriter("zip").write(bundle());
-    expect(clone).toHaveBeenCalledWith(expect.any(ArrayBuffer));
-    clone.mockRestore();
+    // The "copy" holds different bytes, so the ZIP shows whether the writer used it.
+    const copied = new Uint8Array([9, 8, 7]).buffer;
+    const clone = vi.spyOn(globalThis, "structuredClone").mockReturnValue(copied);
+    try {
+      const { files } = await open(bundle());
+      expect(clone).toHaveBeenCalledWith(expect.any(ArrayBuffer));
+      expect([...files["media/001-photo.jpg"]]).toEqual([9, 8, 7]);
+    } finally {
+      clone.mockRestore();
+    }
   });
 
   it("unknown writer id falls back to zip", () => {

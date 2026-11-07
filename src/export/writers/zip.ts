@@ -11,6 +11,7 @@ export const zipWriter: Writer = {
   fileType: "ZIP",
   description: "Markdown + files, for Claude Code",
   limits: { warnBytes: WARN_BYTES, maxBytes: MAX_BYTES, hint: "Select fewer large files." },
+  /** chat.md and messages.json (deflated) plus every media file (stored), in one ZIP. */
   async write(b, onProgress) {
     const entries: ZipEntry[] = [
       { path: "chat.md", data: renderChatMd(b), compress: true },
