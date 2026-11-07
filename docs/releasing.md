@@ -35,7 +35,8 @@ Run `pnpm build && pnpm zip`, then:
   listing and Privacy tabs. Copy the 32-letter item ID.
 - **Firefox:** at [AMO](https://addons.mozilla.org/developers/), submit a new add-on on the **listed**
   channel. Upload `.output/wa-export-<version>-firefox.zip`, then the sources zip when asked, with the
-  build steps (`pnpm install`, `pnpm build`, Node 22+) in the notes to reviewers. The add-on ID is the
+  notes from [amo-reviewer-notes.md](amo-reviewer-notes.md) in **Notes to Reviewer**. For screenshots,
+  use the fictional ones in `docs/images/` (`whatsapp-menu-*.png`, `html-export-*.png`). The add-on ID is the
   gecko `id` in `wxt.config.ts`.
 
 ### 2. Get API keys
