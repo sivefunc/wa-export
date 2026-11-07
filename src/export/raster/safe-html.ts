@@ -1,26 +1,44 @@
 // Turns the snapshot renderer's HTML into DOM for the PNG/PDF layout without innerHTML. The renderer
 // already escapes all chat text (src/export/wa-html.ts); this is a second line of defence, so an
-// escaping bug can't turn a message into code running in WhatsApp's page.
+// escaping bug can't turn a message into code running in WhatsApp's page, or make it load anything.
 
 /** Elements that run code, load other documents or change how the page resolves URLs. */
 const BLOCKED_ELEMENTS = new Set(["script", "iframe", "frame", "frameset", "object", "embed", "applet", "base", "link", "meta", "form", "noscript"]);
 
-/** Attributes holding a URL the browser may follow or load. */
-const URL_ATTRIBUTES = new Set(["href", "src", "xlink:href", "action", "formaction", "poster", "srcset", "background", "data"]);
+/** Attributes the renderer never uses that hold URLs a browser could follow or load: always removed. */
+const DROPPED_ATTRIBUTES = new Set(["srcset", "imagesrcset", "action", "formaction"]);
 
-/**
- * True for URLs the layout may keep: in-page anchors, relative paths, http(s), mailto/tel, blob: and
- * data: images. Browsers ignore tabs, newlines and leading spaces in a scheme, so those are removed first.
- */
-function isSafeUrl(value: string): boolean {
-  const url = value.replace(/[\u0000- ]/g, "").toLowerCase();
-  const scheme = /^([a-z][a-z0-9+.-]*):/.exec(url)?.[1];
-  if (!scheme) return true; // "#top", "media/001.jpg"
-  if (scheme === "data") return url.startsWith("data:image/");
-  return ["http", "https", "mailto", "tel", "blob"].includes(scheme);
+/** Attributes whose URL the browser loads (on links, href/xlink:href are navigation instead). */
+const LOADING_ATTRIBUTES = new Set(["src", "poster", "background", "data", "href", "xlink:href"]);
+const LINKS = new Set(["a", "area"]);
+
+/** Browsers ignore control characters and spaces inside a URL scheme, so compare without them. */
+const normalize = (url: string) => url.replace(/[\u0000-\u0020]/g, "").toLowerCase();
+
+/** Sources the layout may load: our own raster data: images (media is inlined before layout) or #fragments. */
+function isSafeSource(value: string): boolean {
+  const url = normalize(value);
+  return url.startsWith("#") || /^data:image\/(png|jpeg|gif|webp)[;,]/.test(url);
 }
 
-/** Remove blocked elements, event handler attributes and unsafe URLs from everything under `root`. */
+/** Link targets: inert in a layout, but never script. Relative, #, http(s), mailto: and tel: stay. */
+function isSafeLink(value: string): boolean {
+  const scheme = /^([a-z][a-z0-9+.-]*):/.exec(normalize(value))?.[1];
+  return !scheme || ["http", "https", "mailto", "tel"].includes(scheme);
+}
+
+/** Inline styles that could load something: url(), image-set(), or a CSS escape that could spell either. */
+const LOADING_STYLE = /url\s*\(|image-set\s*\(|\\/i;
+
+/** True when the attribute could run code or load something, so it must go. */
+function isUnsafeAttribute(el: Element, name: string, value: string): boolean {
+  if (name.startsWith("on") || DROPPED_ATTRIBUTES.has(name)) return true;
+  if (name === "style") return LOADING_STYLE.test(value);
+  if (!LOADING_ATTRIBUTES.has(name)) return false;
+  return LINKS.has(el.localName) && name.endsWith("href") ? !isSafeLink(value) : !isSafeSource(value);
+}
+
+/** Remove blocked elements and unsafe attributes from everything under `root`. */
 function sanitize(root: ParentNode): void {
   for (const el of [...root.querySelectorAll("*")]) {
     if (BLOCKED_ELEMENTS.has(el.localName)) {
@@ -28,8 +46,7 @@ function sanitize(root: ParentNode): void {
       continue;
     }
     for (const attr of [...el.attributes]) {
-      const name = attr.name.toLowerCase();
-      if (name.startsWith("on") || (URL_ATTRIBUTES.has(name) && !isSafeUrl(attr.value))) el.removeAttribute(attr.name);
+      if (isUnsafeAttribute(el, attr.name.toLowerCase(), attr.value)) el.removeAttribute(attr.name);
     }
   }
 }

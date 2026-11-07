@@ -23,14 +23,41 @@ describe("parseSafeHtml", () => {
     expect(out).toContain('src="data:image/png;base64,AA"');
   });
 
-  it("removes links and sources with script or non-image data URLs", () => {
+  it("keeps only raster data: images and #fragments as sources, so the layout loads nothing", () => {
     const out = html(
-      '<a href="javascript:alert(1)">a</a><a href=" JaVa\tScript:alert(1)">b</a><img src="data:text/html,<script>x</script>">' +
-        '<svg><a href="vbscript:x"><use xlink:href="javascript:x"></use></a></svg><a href="#top">c</a><img src="blob:https://web.whatsapp.com/1">',
+      '<img src="data:image/png;base64,AA"><img src="data:image/webp;base64,BB"><img src="https://tracker.example/p.gif">' +
+        '<img src="data:image/svg+xml,<svg onload=x()>"><img src="blob:https://web.whatsapp.com/1"><img src="media/001.jpg">' +
+        '<video poster="https://x/p.jpg"></video><svg><image href="https://x/i.png"></image><use href="#icon"></use></svg>',
     );
-    expect(out).not.toMatch(/script:|data:text/i);
+    expect(out).toContain('src="data:image/png;base64,AA"');
+    expect(out).toContain('src="data:image/webp;base64,BB"');
+    expect(out).toContain('href="#icon"');
+    expect(out).not.toMatch(/https:|svg\+xml|blob:|media\/001|poster=/);
+  });
+
+  it("keeps ordinary links, which can't run or load anything in a layout, and removes script ones", () => {
+    const out = html(
+      '<a href="https://example.com/x">a</a><a href="mailto:ana@example.com">b</a><a href="#top">c</a>' +
+        '<a href="javascript:alert(1)">d</a><a href=" JaVa\tScript:alert(1)">e</a><a href="data:text/html,x">f</a>' +
+        '<svg><a href="vbscript:x"><text>g</text></a></svg>',
+    );
+    expect(out).toContain('href="https://example.com/x"');
+    expect(out).toContain('href="mailto:ana@example.com"');
     expect(out).toContain('href="#top"');
-    expect(out).toContain('src="blob:https://web.whatsapp.com/1"');
+    expect(out).not.toMatch(/script:|data:text/i);
+  });
+
+  it("removes srcset, action and formaction outright: the renderer never uses them", () => {
+    const out = html('<img src="data:image/png;base64,AA" srcset="data:image/png;base64,AA 1x, https://x/2.png 2x"><button formaction="https://x">b</button>');
+    expect(out).toBe('<img src="data:image/png;base64,AA"><button>b</button>');
+  });
+
+  it("removes style attributes that could load something, and keeps plain ones", () => {
+    const out = html(
+      '<div style="width:900px;height:12px">a</div><div style="background:url(https://x/b.png)">b</div>' +
+        '<div style="background-image: URL (x)">c</div><div style="background:image-set(&quot;x.png&quot; 1x)">d</div><div style="background:u\\72l(x)">e</div>',
+    );
+    expect(out).toBe('<div style="width:900px;height:12px">a</div><div>b</div><div>c</div><div>d</div><div>e</div>');
   });
 
   it("strips inside nested content too", () => {

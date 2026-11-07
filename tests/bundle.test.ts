@@ -2,6 +2,9 @@ import { readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 
+/** `.innerHTML =`, `["outerHTML"] =`, `.innerHTML +=` and the like; not `==` or `===` comparisons. */
+const HTML_ASSIGNMENT = /(?:\.|\[\s*["'`])(?:inner|outer)HTML(?:["'`]\s*\])?\s*[-+*/%&|^?]{0,3}=(?!=)/;
+
 /** Every JavaScript file in a build, as [relative path with / separators, source]. */
 function scripts(target: string): [string, string][] {
   const root = `.output/${target}`;
@@ -15,7 +18,7 @@ describe.each(["chrome-mv3", "firefox-mv3"])("%s bundle", (target) => {
   // Firefox Add-ons lints every file in the package, loaded or not.
   it("nothing assigns innerHTML: the UI builds DOM and the PNG/PDF layout parses with DOMParser", () => {
     const withInnerHtml = scripts(target)
-      .filter(([, src]) => /\.(inner|outer)HTML\s*=(?!=)/.test(src))
+      .filter(([, src]) => HTML_ASSIGNMENT.test(src))
       .map(([f]) => f);
     expect(withInnerHtml).toEqual([]);
   });
