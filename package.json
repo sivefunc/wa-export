@@ -8,6 +8,7 @@
     "node": ">=22.12"
   },
   "scripts": {
+    "icons": "node scripts/icons/render.mjs",
     "dev": "wxt",
     "dev:firefox": "wxt -b firefox",
     "build": "wxt build && wxt build -b firefox",

@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="128" height="128" viewBox="0 0 16 16">
+  <title>Save conversation</title>
+  <!-- A square conversation bubble and download arrow, drawn on a 16 px grid. -->
+  <rect width="16" height="16" rx="3.5" fill="#373080"/>
+  <path d="M4 3h8a1 1 0 0 1 1 1v6a1 1 0 0 1-1 1H7l-4 3V4a1 1 0 0 1 1-1Z" fill="#FFF9ED"/>
+  <path d="M8 5v4m-2-2 2 2 2-2" fill="none" stroke="#373080" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+</svg>
