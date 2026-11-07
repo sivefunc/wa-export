@@ -30,12 +30,15 @@ describe.each(["chrome-mv3", "firefox-mv3"])("%s manifest", (target) => {
     expect(existsSync(`.output/${target}/vendor/wppconnect-wa.js`)).toBe(true);
   });
 
-  it("runs the isolated script only on WhatsApp Web", () => {
+  it("runs the isolated scripts only on WhatsApp Web: the key guard first, the UI when idle", () => {
     const m = readManifest(target);
     const isolated = m.content_scripts.filter((c: any) => c.world !== "MAIN");
-    expect(isolated).toHaveLength(1);
-    expect(isolated[0].matches).toEqual(["https://web.whatsapp.com/*"]);
-    expect(isolated[0].run_at).toBe("document_idle");
+    // Manifest order doesn't matter between scripts with different run_at.
+    expect(Object.fromEntries(isolated.map((c: any) => [c.js.join(), c.run_at]))).toEqual({
+      "content-scripts/wa-keys.js": "document_start",
+      "content-scripts/wa-export.js": "document_idle",
+    });
+    for (const c of isolated) expect(c.matches).toEqual(["https://web.whatsapp.com/*"]);
   });
 
   it("does not start its name with WhatsApp", () => {
