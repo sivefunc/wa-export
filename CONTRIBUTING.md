@@ -7,7 +7,7 @@ Thanks for helping. Most contributions are one of two things: fixing the extensi
 Requirements:
 - Node 22.12+ (`.nvmrc`)
 - pnpm via Corepack (`corepack enable`)
-- Chrome/Chromium 111+ and/or Firefox 140+
+- Chrome/Chromium 111+ and/or Firefox 140+ (142+ on Android)
 
 ```sh
 pnpm install
