@@ -4,7 +4,9 @@ This extension bundles the following third-party software.
 
 ## @wppconnect/wa-js 4.7.2
 
-https://github.com/wppconnect-team/wa-js. Bundled unmodified as `vendor/wppconnect-wa.js`; its own bundled-dependency notices are in `vendor/wppconnect-wa.js.LICENSE.txt`.
+https://github.com/wppconnect-team/wa-js. Bundled as `vendor/wppconnect-wa.js`; its own bundled-dependency notices are in `vendor/wppconnect-wa.js.LICENSE.txt`.
+
+**Modified:** the build replaces one Node-only `eval("require")("stream")` with the `ReferenceError` it throws in a browser, and adds a notice saying so at the top of the file. See `scripts/build/vendor-wa-js.ts`. Nothing else is changed.
 
 ```
                                  Apache License

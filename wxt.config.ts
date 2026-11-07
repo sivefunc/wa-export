@@ -1,5 +1,7 @@
+import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { defineConfig } from "wxt";
+import { vendorWaJs } from "./scripts/build/vendor-wa-js";
 
 const WA_JS_DIST = resolve("node_modules/@wppconnect/wa-js/dist");
 const WA_JS_DEST = "vendor/wppconnect-wa.js";
@@ -30,10 +32,10 @@ export default defineConfig({
       : { minimum_chrome_version: "111" }),
   }),
   hooks: {
-    // WA-JS is bundled from node_modules, never fetched at runtime.
+    // WA-JS is bundled from node_modules, never fetched at runtime, with its one Node-only eval removed.
     "build:publicAssets": (_wxt, files) => {
       files.push(
-        { absoluteSrc: `${WA_JS_DIST}/wppconnect-wa.js`, relativeDest: WA_JS_DEST },
+        { contents: vendorWaJs(readFileSync(`${WA_JS_DIST}/wppconnect-wa.js`, "utf8")), relativeDest: WA_JS_DEST },
         { absoluteSrc: `${WA_JS_DIST}/wppconnect-wa.js.LICENSE.txt`, relativeDest: `${WA_JS_DEST}.LICENSE.txt` },
         { absoluteSrc: resolve("THIRD_PARTY_NOTICES.md"), relativeDest: "THIRD_PARTY_NOTICES.md" },
       );

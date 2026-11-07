@@ -94,6 +94,7 @@ WA-JS runs inside your WhatsApp session with full access, so treat upgrades as a
 1. Read the release notes at https://github.com/wppconnect-team/wa-js/releases.
 2. Diff the old and new `dist/wppconnect-wa.js`.
 3. Bump the **exact** version in `package.json` (no `^`), run `pnpm install`, then run the live checklist.
+4. The build removes one Node-only `eval` from WA-JS (`scripts/build/vendor-wa-js.ts`) and fails if it doesn't find exactly that one. If it fails, review the new code, then update the script and `tests/vendor-wa-js.test.ts`.
 
 ### Store submission
 

@@ -24,33 +24,35 @@ https://github.com/sivefunc/wa-export
 
 The output is `.output/firefox-mv3/`, which matches the uploaded package.
 
-**Third-party code**, unmodified:
+**Third-party code:**
 
 - `vendor/wppconnect-wa.js` is `dist/wppconnect-wa.js` from npm `@wppconnect/wa-js` 4.7.2
-  (Apache-2.0, https://github.com/wppconnect-team/wa-js), copied by `wxt.config.ts`. It runs in the
+  (Apache-2.0, https://github.com/wppconnect-team/wa-js), copied by `wxt.config.ts` with one change:
+  `scripts/build/vendor-wa-js.ts` replaces a Node-only `eval("require")("stream")` in its file-type
+  detection with the `ReferenceError` that eval throws in a browser, so behaviour is unchanged and the
+  file has no eval. A notice at the top of the file says so. It runs in the
   page (MAIN world) because it reads WhatsApp Web's internal message store, which is the only way to
   get the selected messages and their media without scraping or re-downloading them. Our page-world
   code (`src/page/`) answers read-only requests from the content script and blocks WhatsApp's request
   to re-upload expired media.
 - `fflate` 0.8.3 (MIT) builds the ZIP files.
 
-**Validator warnings:**
+**Validator warnings:** none. `tests/no-eval.test.ts` and `tests/bundle.test.ts` keep it that way.
 
-- *eval can be harmful* in `vendor/wppconnect-wa.js`: WA-JS's file-type detection includes a helper
-  for Node.js streams that calls `eval("require")("stream")`. It only runs when given a Node stream,
-  which never happens in a browser. The file is unmodified, so we can't remove it.
+**No HTML parsing into the page.** Nothing assigns `innerHTML`. The Export button and settings page
+build their DOM with `createElement` and text nodes (`src/ui/dom.ts`). The PNG/PDF export lays the
+chat out from the same renderer as the HTML export (`src/export/render-chat-html.ts`), which escapes
+all message text (`src/export/wa-html.ts`). It parses that HTML with `DOMParser` into an inert
+document and sanitizes it (`src/export/raster/safe-html.ts`) before importing it into a closed,
+offscreen shadow root to measure it.
 
-**No HTML parsing into the page.** Nothing assigns `innerHTML`. The Export button and settings page build
-their DOM with `createElement` and text nodes (`src/ui/dom.ts`). The PNG/PDF export lays the chat out
-from the same renderer as the HTML export (`src/export/render-chat-html.ts`), which escapes all
-message text (`src/export/wa-html.ts`). It parses that HTML with `DOMParser` into an inert document
-and sanitizes it (`src/export/raster/safe-html.ts`) before importing it into a closed, offscreen shadow
-root to measure it. The sanitizer removes scripts, frames, forms, SVG animation elements and every
-event handler attribute.
-Sources may only be raster `data:image/` URLs or `#fragments`, so the layout loads nothing. Links
-may only be relative, `#`, http(s), `mailto:` or `tel:`. `srcset` and form actions are removed, as are
-CSS (inline or in `<style>`) with `@import`, `url()`, `image-set()` or CSS escapes. The test `tests/bundle.test.ts` fails if a
-shipped file assigns `innerHTML` or `outerHTML` (dot or bracket access, `=` or compound `+=`).
+- The sanitizer removes scripts, frames, forms, SVG animation elements and every event handler attribute.
+- Sources may only be raster `data:image/` URLs or `#fragments`, so the layout loads nothing.
+- Links may only be relative, `#`, http(s), `mailto:` or `tel:`.
+- `srcset` and form actions are removed, as is CSS (inline or in `<style>`) with `@import`, `url()`,
+  `image-set()` or CSS escapes.
+- `tests/bundle.test.ts` fails if a shipped file assigns `innerHTML` or `outerHTML` (dot or bracket
+  access, `=` or compound `+=`).
 
 **Testing.** WhatsApp Web needs a WhatsApp account on a phone, so we can't provide test credentials.
 With any account: open https://web.whatsapp.com, open a chat, choose ⋮ → Select messages, tick a few
