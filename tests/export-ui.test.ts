@@ -4,6 +4,7 @@ import type { Settings } from "../src/settings";
 import { mountExportUi } from "../src/ui/export-ui";
 import { findForwardButton } from "../src/ui/placement";
 import { spyOnHtmlParsing } from "./helpers/no-html-parsing";
+import { installKeyGuard } from "../src/ui/key-guard";
 
 afterEach(() => {
   document.body.innerHTML = "";
@@ -191,6 +192,30 @@ describe("settings menu", () => {
     gear().click();
     await flush();
   };
+
+  // Bug seen live 2026-11-06: WhatsApp's window capture keydown listener saw the Escape that closed this
+  // menu and cancelled the whole selection.
+  it("keys in the open menu reach the menu but not WhatsApp; with the menu closed they pass through", async () => {
+    const uninstall = installKeyGuard(window);
+    const whatsapp = vi.fn();
+    window.addEventListener("keydown", whatsapp, true);
+    try {
+      setup();
+      await open();
+      expect(document.querySelector("wa-export-ui")!.getAttribute("data-keys")).toBe("own");
+      key("Escape");
+      vi.useFakeTimers();
+      vi.advanceTimersByTime(200);
+      expect(menu()).toBeNull();
+      expect(whatsapp).not.toHaveBeenCalled();
+      expect(document.querySelector("wa-export-ui")!.hasAttribute("data-keys")).toBe(false);
+      key("Escape"); // menu closed: WhatsApp gets it, as before
+      expect(whatsapp).toHaveBeenCalledOnce();
+    } finally {
+      window.removeEventListener("keydown", whatsapp, true);
+      uninstall();
+    }
+  });
 
   it("the gear sits right after Export while idle and announces a menu", () => {
     setup();

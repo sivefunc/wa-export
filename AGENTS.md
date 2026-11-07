@@ -28,6 +28,7 @@ for bridge/writer/saving changes. CI runs the same on Node 22, 24 and 26.
 ```
 entrypoints/wa-main.content.ts    MAIN world: bundled WA-JS + read-only RPC server
 entrypoints/wa-export.content.ts  ISOLATED world: selection tracker, UI, export pipeline
+entrypoints/wa-keys.content.ts    ISOLATED world, document_start: keeps keys in the open settings menu from WhatsApp
 entrypoints/options/              settings page (format, ordering)
 src/page/      WhatsApp internals through WA-JS        ← volatile, breaks on WhatsApp updates
 src/dom/       WhatsApp markup; all selectors in selectors.ts ← volatile

@@ -2,6 +2,7 @@ import { orderings } from "../export/orderings";
 import { writerCatalog } from "../export/writers/catalog";
 import { CUSTOM_QUALITY, longImageChoices, qualityChoices, themeChoices, type Settings } from "../settings";
 import { builder, type Builder, type Child } from "./dom";
+import { KEY_EVENT } from "./key-guard";
 import { findForwardButton, toolbarSlot } from "./placement";
 import { buttonLabel, progressFraction, type UiState } from "./state";
 
@@ -306,6 +307,9 @@ export function mountExportUi(doc: Document, settingsAccess?: SettingsAccess, op
       shadow.replaceChildren(style, wrap);
     }
     host.hidden = state.kind === "hidden";
+    // While the menu is open, the key guard keeps keys pressed in it away from WhatsApp.
+    if (menu && !menu.leaving) host.dataset.keys = "own";
+    else delete host.dataset.keys;
     place();
   };
 
@@ -409,12 +413,16 @@ export function mountExportUi(doc: Document, settingsAccess?: SettingsAccess, op
     await settingsAccess.save(next);
   });
 
-  // Keyboard like WhatsApp's menus: arrows move, Right/Enter open a submenu, Left/Escape go back.
-  shadow.addEventListener("keydown", (event) => {
+  /**
+   * Keyboard like WhatsApp's menus: arrows move, Right/Enter open a submenu, Left/Escape go back.
+   * Keys arrive from the shadow root, or from the key guard (src/ui/key-guard.ts) while the menu is open.
+   */
+  function onKey(e: KeyboardEvent) {
     if (!isOpen()) return;
-    const e = event as KeyboardEvent;
+    // The real target inside our shadow root (the guard sees the event retargeted to the host).
+    const target = e.composedPath()[0] as Element;
     // The slider keeps its own arrow keys; Escape still steps back out of the submenu.
-    if ((e.target as Element).closest?.(".custom-range")) {
+    if (target.closest?.(".custom-range")) {
       if (e.key === "Escape") {
         closeSub();
         e.preventDefault();
@@ -436,7 +444,9 @@ export function mountExportUi(doc: Document, settingsAccess?: SettingsAccess, op
     else return;
     e.preventDefault();
     e.stopPropagation();
-  });
+  }
+  shadow.addEventListener("keydown", (event) => onKey(event as KeyboardEvent));
+  host.addEventListener(KEY_EVENT, (event) => onKey((event as CustomEvent<KeyboardEvent>).detail));
 
   const place = () => {
     const forward = findForwardButton(doc);
