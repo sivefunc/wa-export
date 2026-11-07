@@ -13,6 +13,14 @@ describe.each(["chrome-mv3", "firefox-mv3"])("%s manifest", (target) => {
     expect(m.host_permissions ?? []).toEqual([]);
   });
 
+  it("includes every extension icon size and its packaged file", () => {
+    const m = readManifest(target);
+    for (const size of [16, 32, 48, 96, 128]) {
+      expect(m.icons?.[size]).toBe(`icon/${size}.png`);
+      expect(existsSync(`.output/${target}/${m.icons[size]}`)).toBe(true);
+    }
+  });
+
   it("loads bundled WA-JS first in the MAIN world at document_start", () => {
     const m = readManifest(target);
     const main = m.content_scripts.find((c: any) => c.world === "MAIN");
