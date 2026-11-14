@@ -21,7 +21,9 @@
     "test:chromium": "node scripts/raster-smoke/run.mjs",
     "demo:assets": "node scripts/demo/make-assets.mjs",
     "demo": "node scripts/demo/render.mjs",
-    "demo:banner": "node scripts/demo/banner.mjs"
+    "demo:banner": "node scripts/demo/banner.mjs",
+    "site": "node scripts/site/build.mjs --serve",
+    "site:build": "node scripts/site/build.mjs"
   },
   "dependencies": {
     "@wppconnect/wa-js": "4.7.2",

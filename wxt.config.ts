@@ -9,8 +9,8 @@ const WA_JS_DEST = "vendor/wppconnect-wa.js";
 export default defineConfig({
   manifestVersion: 3,
   zip: {
-    // The sources zip is uploaded to AMO: keep the live WhatsApp profile, secrets and exports out.
-    excludeSources: [".live/**", ".superpowers/**", ".env*", "web-ext-artifacts/**", "**/*.zip"],
+    // The sources zip is uploaded to AMO: keep the live WhatsApp profile, secrets, exports and the website out.
+    excludeSources: [".live/**", ".superpowers/**", "site/**", "scripts/site/**", "tests/site.test.ts", "wrangler.jsonc", ".env*", "web-ext-artifacts/**", "**/*.zip"],
   },
   manifest: ({ browser }) => ({
     name: "WA Export for WhatsApp Web",

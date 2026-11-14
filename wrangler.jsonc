@@ -1,0 +1,11 @@
+// The website (site/, built by scripts/site/build.mjs) as a Cloudflare Worker that only serves static files.
+// Cloudflare Workers Builds deploys it on every push to main; setup in docs/website.md.
+{
+  "name": "wa-export-site",
+  "compatibility_date": "2026-11-01",
+  "assets": {
+    "directory": "./.output/site"
+  },
+  // Cloudflare creates the DNS record and certificate for this custom domain.
+  "routes": [{ "pattern": "wa-export.joan.engineer", "custom_domain": true }]
+}
