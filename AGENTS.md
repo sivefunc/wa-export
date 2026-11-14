@@ -39,6 +39,7 @@ src/ui/        Export button (Shadow DOM), states, controller
 tests/         one *.test.ts per module; fixtures/ holds fictional WhatsApp models
 scripts/live/  drive a real WhatsApp Web session over CDP (manual, needs a QR scan)
 scripts/firefox-smoke/  headless Firefox checks unit tests can't do
+site/          the website (one static page + llms.txt); build: scripts/site/build.mjs; see docs/website.md
 ```
 
 Only `src/page/` and `src/dom/` should need changes when WhatsApp updates. New formats implement `Writer` in

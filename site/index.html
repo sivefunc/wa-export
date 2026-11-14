@@ -1,0 +1,237 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>WA Export: save WhatsApp Web chats as ZIP, HTML, PDF or images</title>
+<meta name="description" content="A Firefox add-on that exports the WhatsApp Web messages you select to a ZIP (Markdown, JSON and media, for coding agents), an HTML page, a PDF or an image. Read-only, and everything runs on your computer.">
+<meta name="color-scheme" content="dark">
+<meta name="theme-color" content="#000000">
+<link rel="canonical" href="%SITE_URL%/">
+<link rel="alternate" type="text/markdown" href="index.md" title="This page as Markdown">
+<link rel="icon" type="image/svg+xml" href="favicon.svg">
+<link rel="stylesheet" href="style.css">
+<meta property="og:type" content="website">
+<meta property="og:url" content="%SITE_URL%/">
+<meta property="og:title" content="WA Export: save WhatsApp Web chats as files">
+<meta property="og:description" content="Select messages, click Export, get a ZIP for coding agents or an HTML page, PDF or image for people. Read-only and local.">
+<meta property="og:image" content="%SITE_URL%/img/whatsapp-menu-dark.png">
+<meta property="og:image:alt" content="WhatsApp Web with four messages selected and the Export 4 button next to Forward">
+<meta name="twitter:card" content="summary_large_image">
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "SoftwareApplication",
+  "name": "WA Export for WhatsApp Web",
+  "alternateName": "WA Export",
+  "description": "Exports the WhatsApp Web messages you select to ZIP (chat.md, messages.json and media), HTML, PDF or PNG/JPEG, entirely on your computer.",
+  "applicationCategory": "BrowserApplication",
+  "operatingSystem": "Firefox 140+, Firefox for Android 142+",
+  "url": "%SITE_URL%/",
+  "downloadUrl": "https://addons.mozilla.org/en-US/firefox/addon/wa-export-for-whatsapp-web/",
+  "license": "https://opensource.org/licenses/MIT",
+  "isAccessibleForFree": true,
+  "offers": { "@type": "Offer", "price": "0", "priceCurrency": "USD" },
+  "sameAs": ["https://github.com/sivefunc/wa-export", "https://addons.mozilla.org/en-US/firefox/addon/wa-export-for-whatsapp-web/"]
+}
+</script>
+<script src="main.js"></script>
+</head>
+<body>
+<a class="skip" href="#main">Skip to content</a>
+
+<!-- File icons: a page with a folded corner, a coloured label and a glyph per format. -->
+<svg class="sprite" aria-hidden="true">
+  <symbol id="page" viewBox="0 0 78 96">
+    <path d="M8 1h44l25 25v61a8 8 0 0 1-8 8H8a8 8 0 0 1-8-8V9a8 8 0 0 1 8-8Z" fill="#14171c" stroke="#2c3138"/>
+    <path d="M52 1v17a8 8 0 0 0 8 8h17" fill="#22272e" stroke="#2c3138"/>
+  </symbol>
+  <symbol id="ic-md" viewBox="0 0 78 96">
+    <use href="#page"/>
+    <g transform="translate(13 32) scale(.25)"><rect x="6" y="6" width="196" height="116" rx="10" fill="none" stroke="#e9edef" stroke-width="12"/><path fill="#e9edef" d="M30 98V30h20l20 25 20-25h20v68H90V59L70 84 50 59v39zm125 0-30-33h20V30h20v35h20z"/></g>
+    <rect x="10" y="66" width="34" height="18" rx="4" fill="#e9edef"/>
+    <text x="27" y="79" text-anchor="middle" class="lbl" fill="#000">MD</text>
+  </symbol>
+  <symbol id="ic-json" viewBox="0 0 78 96">
+    <use href="#page"/>
+    <text x="35" y="54" text-anchor="middle" class="glyph" fill="#f5c542">{ }</text>
+    <rect x="10" y="66" width="46" height="18" rx="4" fill="#f5c542"/>
+    <text x="33" y="79" text-anchor="middle" class="lbl" fill="#1a1400">JSON</text>
+  </symbol>
+  <symbol id="ic-pdf" viewBox="0 0 78 96">
+    <use href="#page"/>
+    <g fill="#3a4049"><rect x="14" y="30" width="40" height="4" rx="2"/><rect x="14" y="38" width="48" height="4" rx="2"/><rect x="14" y="46" width="32" height="4" rx="2"/><rect x="14" y="54" width="44" height="4" rx="2"/></g>
+    <rect x="10" y="66" width="38" height="18" rx="4" fill="#ef4444"/>
+    <text x="29" y="79" text-anchor="middle" class="lbl" fill="#fff">PDF</text>
+  </symbol>
+  <symbol id="ic-zip" viewBox="0 0 78 96">
+    <use href="#page"/>
+    <g fill="#a78bfa"><rect x="30" y="4" width="8" height="5"/><rect x="38" y="9" width="8" height="5"/><rect x="30" y="14" width="8" height="5"/><rect x="38" y="19" width="8" height="5"/><rect x="30" y="24" width="8" height="5"/><rect x="38" y="29" width="8" height="5"/><rect x="31" y="38" width="14" height="18" rx="3"/></g>
+    <rect x="35" y="44" width="6" height="6" rx="1" fill="#14171c"/>
+    <rect x="10" y="66" width="36" height="18" rx="4" fill="#a78bfa"/>
+    <text x="28" y="79" text-anchor="middle" class="lbl" fill="#140b2b">ZIP</text>
+  </symbol>
+  <symbol id="ic-png" viewBox="0 0 78 96">
+    <use href="#page"/>
+    <rect x="12" y="26" width="52" height="34" rx="5" fill="#0c2733"/><circle cx="24" cy="36" r="5" fill="#fde047"/>
+    <path d="M12 56l16-15 11 10 8-7 17 14v2a5 5 0 0 1-5 5H17a5 5 0 0 1-5-5Z" fill="#38bdf8"/>
+    <rect x="10" y="66" width="38" height="18" rx="4" fill="#38bdf8"/>
+    <text x="29" y="79" text-anchor="middle" class="lbl" fill="#04121a">PNG</text>
+  </symbol>
+  <symbol id="ic-html" viewBox="0 0 78 96">
+    <use href="#page"/>
+    <path d="M24 34 14 44l10 10M50 34l10 10-10 10M41 30l-8 28" fill="none" stroke="#fb923c" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
+    <rect x="10" y="66" width="44" height="18" rx="4" fill="#fb923c"/>
+    <text x="32" y="79" text-anchor="middle" class="lbl" fill="#1f0e02">HTML</text>
+  </symbol>
+</svg>
+
+<header class="nav">
+  <a class="brand" href="#top"><img src="favicon.svg" alt="" width="22" height="22">WA Export</a>
+  <nav aria-label="Sections">
+    <a href="#how">How it works</a>
+    <a href="#formats">Formats</a>
+    <a href="#agents">For agents</a>
+    <a href="#privacy">Privacy</a>
+    <a class="strong" href="https://github.com/sivefunc/wa-export">GitHub ↗</a>
+  </nav>
+</header>
+
+<main id="main">
+  <section class="hero" id="top">
+    <div class="files" aria-hidden="true">
+      <div class="file f1"><div class="bob"><svg viewBox="0 0 78 96"><use href="#ic-md"/></svg><span>chat.md</span></div></div>
+      <div class="file f2"><div class="bob"><svg viewBox="0 0 78 96"><use href="#ic-json"/></svg><span>messages.json</span></div></div>
+      <div class="file f3"><div class="bob"><svg viewBox="0 0 78 96"><use href="#ic-pdf"/></svg><span>chat.pdf</span></div></div>
+      <div class="file f4"><div class="bob"><svg viewBox="0 0 78 96"><use href="#ic-zip"/></svg><span>chat.zip</span></div></div>
+      <div class="file f5"><div class="bob"><svg viewBox="0 0 78 96"><use href="#ic-png"/></svg><span>chat.png</span></div></div>
+      <div class="file f6"><div class="bob"><svg viewBox="0 0 78 96"><use href="#ic-html"/></svg><span>chat.html</span></div></div>
+    </div>
+
+    <h1><span class="w">Save</span> <span class="w">WhatsApp</span> <span class="w">Web</span> <span class="w">chats</span> <span class="w">as</span> <span class="w">files.</span></h1>
+    <p class="lede">Select messages, click Export, and get a ZIP for coding agents, or an HTML page, PDF or image for people. Everything runs on your computer.</p>
+    <div class="ctas">
+      <a class="cta" href="https://addons.mozilla.org/en-US/firefox/addon/wa-export-for-whatsapp-web/">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 4v11m-5-5 5 5 5-5M5 20h14" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        Add to Firefox
+      </a>
+      <a class="gh" href="https://github.com/sivefunc/wa-export">Read the source on GitHub ↗</a>
+      <p class="compat">Firefox 140+ · Firefox for Android 142+ · Chrome soon · Free and open source</p>
+    </div>
+  </section>
+
+  <div class="product">
+    <figure class="window" id="window">
+      <div class="bar" aria-hidden="true"><i></i><i></i><i></i><span>web.whatsapp.com</span></div>
+      <div class="shot">
+        <img src="img/whatsapp-menu-dark.png" width="1280" height="675"
+          alt="WhatsApp Web in Select messages mode with four messages ticked, the Export 4 button next to Forward, and its settings menu open on Format">
+        <div class="fx" aria-hidden="true">
+          <div class="ring"></div>
+          <svg class="fly a" viewBox="0 0 78 96"><use href="#ic-md"/></svg>
+          <svg class="fly b" viewBox="0 0 78 96"><use href="#ic-zip"/></svg>
+          <svg class="fly c" viewBox="0 0 78 96"><use href="#ic-json"/></svg>
+          <svg class="cursor" viewBox="0 0 24 24"><path d="M4 2l15 9-6.5 1.6L16 20l-2.8 1.3-3.4-7.3L4 18Z" fill="#fff" stroke="#000" stroke-width="1.2"/></svg>
+          <div class="toast"><svg viewBox="0 0 78 96"><use href="#ic-zip"/></svg><div>Bao the Panda-2026-10-24-1007.zip<small>4 messages · saved to Downloads</small></div></div>
+        </div>
+      </div>
+      <figcaption>A fictional chat, made for this screenshot.</figcaption>
+    </figure>
+  </div>
+
+  <section class="block reveal" id="how" aria-labelledby="how-title">
+    <p class="kicker">How it works</p>
+    <h2 id="how-title">It lives inside WhatsApp Web.</h2>
+    <ol class="steps">
+      <li class="card reveal"><span class="n">01</span><h3>Select</h3><p>In a chat, open ⋮ → <b>Select messages</b> and tick the ones you want. Ticks you scroll past are kept.</p></li>
+      <li class="card reveal"><span class="n">02</span><h3>Export</h3><p>Click <b>Export</b>, next to Forward. The ⚙ beside it picks the format, the order and the theme.</p></li>
+      <li class="card reveal"><span class="n">03</span><h3>Keep it</h3><p>One file lands in your downloads, with the photos, voice notes, videos and documents you selected.</p></li>
+    </ol>
+  </section>
+
+  <section class="block reveal" id="formats" aria-labelledby="formats-title">
+    <p class="kicker">Formats</p>
+    <h2 id="formats-title">Looks like WhatsApp. Opens anywhere.</h2>
+    <p class="sub">HTML, PDF and images keep the WhatsApp look, in light, dark or your system's theme. This is a real HTML export of a fictional chat; scroll it, play the voice note.</p>
+    <div class="formats">
+      <div class="live">
+        <iframe src="demo/bamboo-team.html" title="HTML export of a fictional group chat called Bamboo team" sandbox="allow-scripts allow-modals allow-downloads allow-popups allow-popups-to-escape-sandbox" loading="lazy"></iframe>
+      </div>
+      <ul class="flist" id="flist">
+        <li class="card on"><h3><svg viewBox="0 0 78 96" aria-hidden="true"><use href="#ic-html"/></svg>HTML</h3><p>One page that opens in any browser. Photos, stickers, voice notes and videos play; documents download.</p></li>
+        <li class="card"><h3><svg viewBox="0 0 78 96" aria-hidden="true"><use href="#ic-pdf"/></svg>PDF</h3><p>The same look on A4 pages. Text can be searched and copied.</p></li>
+        <li class="card"><h3><svg viewBox="0 0 78 96" aria-hidden="true"><use href="#ic-png"/></svg>Image</h3><p>The same look as one PNG or JPEG. Long chats can be split into parts.</p></li>
+        <li class="card"><h3><svg viewBox="0 0 78 96" aria-hidden="true"><use href="#ic-zip"/></svg>ZIP</h3><p><code>chat.md</code>, <code>messages.json</code> and <code>media/</code> with every original file.</p></li>
+      </ul>
+    </div>
+  </section>
+
+  <section class="block reveal" id="agents" aria-labelledby="agents-title">
+    <p class="kicker">For coding agents</p>
+    <h2 id="agents-title">Hand a conversation to a coding agent.</h2>
+    <div class="two">
+      <div>
+        <p class="sub">The ZIP holds the chat as Markdown and as structured JSON, with every file in <code>media/</code>, linked from where it was sent. Unzip it and point Claude Code, Codex or any agent at the folder: it reads who said what, the replies and the files.</p>
+        <pre class="tree" id="zip-tree"><span class="ln">Bamboo team-2026-10-24-1015.zip</span>
+<span class="ln">├── chat.md</span>
+<span class="ln">├── messages.json</span>
+<span class="ln">└── media/</span>
+<span class="ln">    ├── 001-photo-mockup.jpg</span>
+<span class="ln">    ├── 002-sticker-bao.webp</span>
+<span class="ln">    ├── 003-voice-note.ogg</span>
+<span class="ln">    ├── 004-release-notes.pdf</span>
+<span class="ln">    └── 005-demo-clip.mp4</span></pre>
+      </div>
+      <figure class="doc">
+        <figcaption><svg viewBox="0 0 78 96" aria-hidden="true"><use href="#ic-md"/></svg>chat.md</figcaption>
+        <pre id="chat-md"># WhatsApp export: Bamboo team
+
+Exported: 2026-10-24 10:15 · 10 messages
+
+---
+
+## Bao the Panda — 2026-10-24 10:01
+
+Morning! 🎋 Who's trying the **new export** today?
+
+## You — 2026-10-24 10:02
+
+Me! Selecting a few messages now
+
+## Mei — 2026-10-24 10:03
+
+Here's the mockup for v0.2
+
+![](media/001-photo-mockup.jpg)</pre>
+      </figure>
+    </div>
+  </section>
+
+  <section class="block reveal" id="privacy" aria-labelledby="privacy-title">
+    <p class="kicker">Privacy</p>
+    <h2 id="privacy-title">Read-only. Local. Open source.</h2>
+    <ul class="checks">
+      <li class="reveal">It only reads, and only when you click Export. It never sends, forwards, deletes, reacts to or marks anything as read.</li>
+      <li class="reveal">Nothing goes to a server and there are no analytics. Besides web.whatsapp.com, its only permission is storage, for your settings.</li>
+      <li class="reveal">View-once media is skipped on purpose. Files WhatsApp no longer has are reported, never re-requested from the sender's phone.</li>
+      <li class="reveal">Every file it couldn't save is listed in the export itself. MIT licensed, with every line on GitHub.</li>
+    </ul>
+    <p class="fine">Using an unofficial extension with WhatsApp is against its terms of service. This one only reads, but the risk isn't zero. <a href="https://github.com/sivefunc/wa-export/blob/main/PRIVACY.md">Privacy policy</a></p>
+  </section>
+
+  <section class="final reveal" aria-labelledby="final-title">
+    <h2 id="final-title">Export your first chat.</h2>
+    <a class="cta" href="https://addons.mozilla.org/en-US/firefox/addon/wa-export-for-whatsapp-web/">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 4v11m-5-5 5 5 5-5M5 20h14" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      Add to Firefox
+    </a>
+    <p class="compat">On Chrome? <a href="https://github.com/sivefunc/wa-export#install">Build it from source</a> until the Chrome Web Store listing is up.</p>
+  </section>
+</main>
+
+<footer>
+  <p>Not affiliated with WhatsApp or Meta. WhatsApp is a trademark of Meta Platforms, Inc.</p>
+  <p><a href="https://github.com/sivefunc/wa-export">GitHub</a> · <a href="https://github.com/sivefunc/wa-export/blob/main/PRIVACY.md">Privacy</a> · <a href="index.md">Markdown</a> · <a href="llms.txt">llms.txt</a> · MIT License</p>
+</footer>
+</body>
+</html>

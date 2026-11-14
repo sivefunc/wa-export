@@ -1,0 +1,20 @@
+# WA Export
+
+> A free, open-source browser add-on (Firefox 140+, Firefox for Android 142+; Chrome from source) that exports the WhatsApp Web messages you select to a ZIP (chat.md + messages.json + media/, made for coding agents), an HTML page, a PDF or a PNG/JPEG image. Read-only, no servers, no analytics. Not affiliated with WhatsApp or Meta.
+
+## Docs
+
+- [This website as Markdown](%SITE_URL%/index.md): what it does, the formats, a sample ZIP and chat.md, privacy
+- [README](https://github.com/sivefunc/wa-export/blob/main/README.md): usage, export formats in detail, install, known limitations
+- [Privacy policy](https://github.com/sivefunc/wa-export/blob/main/PRIVACY.md): what is read and what never leaves the computer
+- [Demo HTML export](%SITE_URL%/demo/bamboo-team.html): a real export of a fictional group chat
+
+## Install
+
+- [Firefox Add-ons listing](https://addons.mozilla.org/en-US/firefox/addon/wa-export-for-whatsapp-web/): install for Firefox and Firefox for Android
+- [Build from source](https://github.com/sivefunc/wa-export#install): Chrome/Chromium 111+ until the Chrome Web Store listing is up
+
+## Optional
+
+- [Contributing](https://github.com/sivefunc/wa-export/blob/main/CONTRIBUTING.md): architecture, tests, the rules every change keeps
+- [AGENTS.md](https://github.com/sivefunc/wa-export/blob/main/AGENTS.md): guide for coding agents working on the repo

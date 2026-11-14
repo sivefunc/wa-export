@@ -5,3 +5,4 @@ node_modules/
 .superpowers/
 .env*
 web-ext-artifacts/
+.wrangler/
