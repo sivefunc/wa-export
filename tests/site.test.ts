@@ -4,7 +4,7 @@ import { join, relative } from "node:path";
 import { JSDOM } from "jsdom";
 import { beforeAll, describe, expect, it } from "vitest";
 import { demoChat } from "../scripts/demo/demo-chat";
-import { buildSite, SITE_URL } from "../scripts/site/build.mjs";
+import { buildSite, resolveRequest, SITE_URL } from "../scripts/site/build.mjs";
 import { exportFilename } from "../src/export/naming";
 import { renderChatMd } from "../src/export/render-chat-md";
 
@@ -92,6 +92,14 @@ describe("website build", () => {
     // but stays in its own opaque origin and can't navigate the page.
     const sandbox = frame.getAttribute("sandbox")!.split(/\s+/).sort();
     expect(sandbox).toEqual(["allow-downloads", "allow-modals", "allow-popups", "allow-popups-to-escape-sandbox", "allow-scripts"]);
+  });
+
+  it("previews safely: bad or escaping request paths never crash the server or leave the site", () => {
+    const base = "/srv/site";
+    expect(resolveRequest(base, "/")).toEqual({ status: 200, file: join(base, "index.html") });
+    expect(resolveRequest(base, "/demo/bamboo-team.html")).toEqual({ status: 200, file: join(base, "demo/bamboo-team.html") });
+    expect(resolveRequest(base, "/%")).toEqual({ status: 400 });
+    expect(resolveRequest(base, "/..%2fpackage.json")).toEqual({ status: 403 });
   });
 
   it("shows the coding-agent sample exactly as the demo chat exports", () => {

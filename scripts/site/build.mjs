@@ -57,16 +57,34 @@ const TYPES = {
 };
 
 /**
- * Serves `dir` on localhost for previewing, the way Pages would: `/` is index.html.
+ * Maps a request URL to a file in the built site, the way the host does: `/` is index.html.
+ * @param {string} base absolute path of the built site
+ * @param {string} url the request URL (path and query)
+ * @returns {{ status: 200, file: string } | { status: 400 | 403 }} 400 for a malformed path, 403 for one
+ *   that leads outside the site
+ */
+export function resolveRequest(base, url) {
+  let path;
+  try {
+    path = decodeURIComponent(new URL(url, "http://localhost").pathname);
+  } catch {
+    return { status: 400 };
+  }
+  const file = normalize(join(base, path.endsWith("/") ? `${path}index.html` : path));
+  return file.startsWith(base + sep) ? { status: 200, file } : { status: 403 };
+}
+
+/**
+ * Serves `dir` on localhost for previewing.
  * @param {string} dir the built site
  * @param {number} port the port to listen on
  */
 function serve(dir, port) {
   const base = resolve(dir);
   createServer((req, res) => {
-    const path = decodeURIComponent(new URL(req.url ?? "/", "http://localhost").pathname);
-    const file = normalize(join(base, path.endsWith("/") ? `${path}index.html` : path));
-    if (!file.startsWith(base + sep)) return void res.writeHead(403).end();
+    const target = resolveRequest(base, req.url ?? "/");
+    if (target.status !== 200) return void res.writeHead(target.status).end();
+    const { file } = target;
     try {
       const body = readFileSync(file);
       res.writeHead(200, { "Content-Type": TYPES[extname(file)] ?? "application/octet-stream" }).end(body);
