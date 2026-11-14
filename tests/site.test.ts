@@ -88,7 +88,10 @@ describe("website build", () => {
     const frame = doc.querySelector("iframe")!;
     expect(frame.getAttribute("src")).toBe("demo/bamboo-team.html");
     expect(frame.getAttribute("title")).toBeTruthy();
-    expect(frame.getAttribute("sandbox")).toBe("allow-scripts");
+    // The export works inside the frame (Save as PDF prints, documents download, its GitHub link opens a tab)
+    // but stays in its own opaque origin and can't navigate the page.
+    const sandbox = frame.getAttribute("sandbox")!.split(/\s+/).sort();
+    expect(sandbox).toEqual(["allow-downloads", "allow-modals", "allow-popups", "allow-popups-to-escape-sandbox", "allow-scripts"]);
   });
 
   it("shows the coding-agent sample exactly as the demo chat exports", () => {
