@@ -29,7 +29,10 @@ to `main`. `wrangler.jsonc` names the Worker (`wa-export-site`),
 points it at `.output/site` and declares the custom domain, so Cloudflare creates the DNS record and the
 certificate. `site/_headers` sets the security headers.
 
-1. Cloudflare dashboard → **Workers & Pages** → **Create** → **Import a repository** → GitHub →
+1. On GitHub, give Cloudflare's app access to the repo: **Settings → Applications → Installed GitHub Apps →
+   Cloudflare Workers and Pages → Configure → Repository access**, add `sivefunc/wa-export`. Without it the
+   dashboard can still import the repo, but pushes never reach Cloudflare and nothing builds on its own.
+   Then Cloudflare dashboard → **Workers & Pages** → **Create** → **Import a repository** → GitHub →
    `sivefunc/wa-export`.
 2. Settings:
    - Project name: `wa-export-site` (it must match `name` in `wrangler.jsonc`)
@@ -41,9 +44,9 @@ certificate. `site/_headers` sets the security headers.
    not the extension's dependencies. Node comes from `.nvmrc`.
 4. **Save and Deploy.** The first deploy attaches `wa-export.joan.engineer`; it can take a few minutes to
    get its certificate.
-5. Leave **Settings → Build → Build watch paths** at `*`. With narrower includes (`site/*`, `docs/images/*`, …)
-   a merge that changed `site/_headers` started no build at all (2026-11-15), so every push to `main` rebuilds
-   the site instead; a build takes well under a minute.
+5. **Settings → Build → Build watch paths** is `*`: every push to `main` rebuilds the site, which takes well
+   under a minute. A merge that builds nothing at all, not even a skipped build, means the GitHub app has lost
+   access to the repo (step 1).
 
 `cf builds list --external-script-id <worker id>` shows the build history, and
 `cf builds create <trigger uuid> --body '{"branch":"main"}'` starts a build of `main` by hand.
