@@ -87,3 +87,5 @@ risk isn't zero. Privacy policy: <https://github.com/sivefunc/wa-export/blob/mai
 ---
 
 Not affiliated with WhatsApp or Meta. WhatsApp is a trademark of Meta Platforms, Inc.
+
+This website counts visits with Cloudflare Web Analytics, without cookies. The add-on itself collects nothing.

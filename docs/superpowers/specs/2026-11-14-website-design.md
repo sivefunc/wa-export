@@ -13,7 +13,7 @@ product in the centre, a short scroll, nothing to sign up for.
   it's read-only and local; read well for an LLM (`llms.txt`, a Markdown copy, semantic HTML that works
   without JavaScript).
 - **Non-goals:** docs site, blog, multiple languages, store-style reviews.
-- **Anti-goals:** anything that contradicts the extension's promises — no analytics, no third-party fonts,
+- **Anti-goals:** anything that contradicts the extension's promises — no third-party fonts,
   scripts or embeds; nothing that looks like WhatsApp's or Meta's own branding (no WhatsApp logo, a
   "not affiliated" line in the footer).
 
@@ -57,6 +57,9 @@ JavaScript is off (hidden states only apply under a `.js` class the script adds)
 - **Tests** (`tests/site.test.ts`): the build output, no remote loads, no inline script/style, alt text,
   the agents sample matches the real demo export, `index.md` covers every section, one canonical URL.
 - `site/` is left out of the Firefox sources ZIP; AMO doesn't need it.
+- **Analytics** (decided 2026-11-14): the website keeps Cloudflare Web Analytics, which Cloudflare injects
+  at the edge. The CSP allows only its script and endpoint, the footer discloses it, and the demo export is
+  excluded with `Cache-Control: no-transform`. The add-on still collects nothing.
 
 ## Left for later
 

@@ -15,7 +15,10 @@ export, and `index.md` covering every section. When you change a section, change
 
 ## Rules
 
-The site follows the extension's promises: no analytics, no web fonts, no third-party scripts or embeds.
+The site follows the extension's promises: no web fonts, no third-party scripts or embeds in its own code.
+The one exception is Cloudflare Web Analytics (cookie-free visit counts), which Cloudflare adds at the edge;
+`_headers` allows exactly its script and endpoint, and the footer says the website uses it. The add-on itself
+collects nothing, and every "no analytics" line on the page is about the add-on.
 Use fictional chats only (the "Bamboo team" and "Bao the Panda" ones). Don't use WhatsApp's logo, and keep
 the "not affiliated" line in the footer.
 
@@ -41,7 +44,7 @@ certificate. `site/_headers` sets the security headers.
 5. Optional: **Settings → Build → Build watch paths**, include `site/*`, `scripts/site/*`, `docs/images/*`,
    `docs/demo/*`, `assets/*` and `wrangler.jsonc`, so extension-only commits don't redeploy the site.
 
-Don't run `wrangler deploy` by hand; push to `main`. Keep Web Analytics off. Check a deploy with
+Don't run `wrangler deploy` by hand; push to `main`. Check a deploy with
 `npx wrangler@4.92.0 deploy --dry-run` after `pnpm site:build`.
 
 The address is set once, in `SITE_URL` in `scripts/site/build.mjs`, and as the route in `wrangler.jsonc`;

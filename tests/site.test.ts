@@ -45,7 +45,7 @@ describe("website build", () => {
     );
   });
 
-  it("loads nothing from another site", () => {
+  it("loads nothing from another site in its own code", () => {
     const loaded = [...doc.querySelectorAll("script[src], link[href]:not([rel=canonical]), img, iframe, source, use")].map(
       (el) => el.getAttribute("src") ?? el.getAttribute("href") ?? "",
     );
@@ -61,8 +61,14 @@ describe("website build", () => {
     expect(doc.querySelectorAll("style, [style]")).toHaveLength(0);
     expect([...doc.querySelectorAll("*")].flatMap((el) => [...el.attributes].filter((a) => a.name.startsWith("on")))).toEqual([]);
     const headers = read("_headers");
-    expect(headers).toMatch(/Content-Security-Policy: default-src 'none'; script-src 'self'; style-src 'self';/);
-    expect(headers.split("/demo/*")[0]).not.toContain("unsafe-inline");
+    const [page, demo] = headers.split("/demo/*") as [string, string];
+    // Cloudflare adds its Web Analytics beacon at the edge; the CSP lets exactly that script and its endpoint through.
+    expect(page).toMatch(
+      /Content-Security-Policy: default-src 'none'; script-src 'self' https:\/\/static\.cloudflareinsights\.com; style-src 'self'; img-src 'self'; frame-src 'self'; connect-src https:\/\/cloudflareinsights\.com;/,
+    );
+    expect(page).not.toContain("unsafe-inline");
+    // The demo is a real export with its own strict CSP; no-transform keeps Cloudflare from adding the beacon to it.
+    expect(demo).toMatch(/Cache-Control: .*no-transform/);
   });
 
   it("shows everything without JavaScript; motion hides content only under .js", () => {
@@ -81,6 +87,8 @@ describe("website build", () => {
     expect(hrefs).toContain(REPO);
     expect(doc.querySelector("h1")!.textContent!.replace(/\s+/g, " ").trim()).toBe("Save WhatsApp Web chats as files.");
     expect(doc.body.textContent).toMatch(/not affiliated with WhatsApp or Meta/i);
+    // The add-on collects nothing; the website itself counts visits, and says so.
+    expect(doc.querySelector("footer")!.textContent).toMatch(/This website counts visits with Cloudflare Web Analytics/);
   });
 
   it("describes every image and frame, and sandboxes the demo export", () => {
@@ -116,6 +124,7 @@ describe("website build", () => {
   it("gives LLMs the same content as Markdown, and an llms.txt that links to it", () => {
     const md = read("index.md");
     for (const h of doc.querySelectorAll("main h2")) expect(md).toContain(`## ${h.textContent!.trim()}`);
+    expect(md).toMatch(/This website counts visits with Cloudflare Web Analytics/);
     expect(md).toContain(AMO);
     const llms = read("llms.txt");
     expect(llms).toMatch(/^# WA Export\n\n> .+\n/);
