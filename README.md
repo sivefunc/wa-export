@@ -10,7 +10,7 @@ Chrome/Chromium 111+, Firefox 140+ on desktop and Firefox 142+ on Android. Every
 
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="docs/images/whatsapp-menu-dark.png">
-  <img alt="WhatsApp Web in Select messages mode, with four messages ticked, the Export 4 button next to Forward, and its settings menu open on Format" src="docs/images/whatsapp-menu-light.png">
+  <img alt="WhatsApp Web in Select messages mode, with four messages ticked, the Export 4 button next to Forward, and its settings menu open on Format, listing ZIP, HTML, PDF, PNG and JPEG beside Order, Theme, Long images and Quality" src="docs/images/whatsapp-menu-light.png">
 </picture>
 
 <sub>A fictional chat, made for this screenshot. See [docs/demo](docs/demo/README.md).</sub>

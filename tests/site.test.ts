@@ -92,6 +92,13 @@ describe("website build", () => {
     expect(doc.querySelector("footer")!.textContent).toMatch(/This website counts visits with Cloudflare Web Analytics/);
   });
 
+  it("declares the WhatsApp screenshot's real size, so the page never stretches it", () => {
+    const png = readFileSync(join(out, "img/whatsapp-menu-dark.png"));
+    const [width, height] = [png.readUInt32BE(16), png.readUInt32BE(20)]; // the PNG IHDR chunk
+    const img = doc.querySelector('img[src="img/whatsapp-menu-dark.png"]')!;
+    expect([img.getAttribute("width"), img.getAttribute("height")]).toEqual([String(width), String(height)]);
+  });
+
   it("describes every image and frame, and sandboxes the demo export", () => {
     for (const img of doc.querySelectorAll("img")) expect(img.getAttribute("alt")).not.toBeNull();
     const frame = doc.querySelector("iframe")!;

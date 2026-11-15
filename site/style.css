@@ -191,23 +191,23 @@ footer a { color: #c9ccd1; }
 /* The frame flattens as it scrolls in (main.js sets --tilt and --scale). */
 .js .window { transform: rotateX(var(--tilt, 18deg)) scale(var(--scale, .94)); }
 
-/* A cursor clicks the real Export button (87.5% / 95.3% of the screenshot), files fly out, a notice appears. */
+/* A cursor clicks the real Export button (87.5% / 95.9% of the screenshot), files fly out, a notice appears. */
 .js .fx { display: block; position: absolute; inset: 0; pointer-events: none; }
 .js .cursor { position: absolute; width: 22px; height: 22px; animation: cursor 7s infinite both; }
 @keyframes cursor {
   0% { left: 55%; top: 50%; opacity: 0; }
   8% { opacity: 1; }
-  35% { left: 87.2%; top: 94.6%; transform: none; }
-  40% { left: 87.2%; top: 94.6%; transform: scale(.85); }
-  44%, 80% { left: 87.2%; top: 94.6%; transform: none; opacity: 1; }
-  92%, 100% { left: 87.2%; top: 94.6%; opacity: 0; }
+  35% { left: 87.2%; top: 95.3%; transform: none; }
+  40% { left: 87.2%; top: 95.3%; transform: scale(.85); }
+  44%, 80% { left: 87.2%; top: 95.3%; transform: none; opacity: 1; }
+  92%, 100% { left: 87.2%; top: 95.3%; opacity: 0; }
 }
 .js .ring {
-  position: absolute; left: 87.5%; top: 95.3%; width: 20px; height: 20px; margin: -10px 0 0 -10px;
+  position: absolute; left: 87.5%; top: 95.9%; width: 20px; height: 20px; margin: -10px 0 0 -10px;
   border: 2px solid var(--green); border-radius: 50%; animation: ring 7s infinite both;
 }
 @keyframes ring { 0%, 39% { opacity: 0; transform: scale(.5); } 40% { opacity: 1; } 55%, 100% { opacity: 0; transform: scale(5); } }
-.js .fly { position: absolute; left: 86.5%; top: 92%; width: 26px; height: 32px; }
+.js .fly { position: absolute; left: 86.5%; top: 92.6%; width: 26px; height: 32px; }
 .js .fly.a { animation: fly-a 7s infinite both; }
 .js .fly.b { animation: fly-b 7s infinite both; }
 .js .fly.c { animation: fly-c 7s infinite both; }
@@ -215,7 +215,7 @@ footer a { color: #c9ccd1; }
 @keyframes fly-b { 0%, 42% { opacity: 0; transform: none; } 45% { opacity: 1; } 62%, 100% { opacity: 0; transform: translate(-30px, -300px) rotate(8deg); } }
 @keyframes fly-c { 0%, 43% { opacity: 0; transform: none; } 46% { opacity: 1; } 64%, 100% { opacity: 0; transform: translate(40px, -240px) rotate(22deg); } }
 .js .toast {
-  position: absolute; right: 3%; bottom: 16%;
+  position: absolute; left: 21%; top: 29%;
   display: flex; gap: 10px; align-items: center; padding: 10px 14px 10px 10px;
   background: #111b21f2; border: 1px solid #2a3942; border-radius: 12px; box-shadow: 0 10px 30px #000a;
   color: #e9edef; font-size: 13px; text-align: left;
@@ -247,7 +247,7 @@ footer a { color: #c9ccd1; }
   .block { padding-top: 96px; }
   .steps, .formats, .two, .checks { grid-template-columns: 1fr; }
   .live iframe { height: 480px; }
-  .js .toast { right: 2%; bottom: 14%; font-size: 11px; padding: 6px 10px 6px 6px; }
+  .js .toast { left: 12%; top: 26%; font-size: 11px; padding: 6px 10px 6px 6px; }
   .final { padding: 110px 16px 80px; }
 }
 
