@@ -1,13 +1,16 @@
-# Response headers, applied by Cloudflare Workers static assets. The page loads only its own files.
+# Response headers, applied by Cloudflare Workers static assets. The page loads only its own files, plus
+# the Cloudflare Web Analytics beacon that Cloudflare adds at the edge (script and reporting endpoint).
 /*
-  Content-Security-Policy: default-src 'none'; script-src 'self'; style-src 'self'; img-src 'self'; frame-src 'self'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'
+  Content-Security-Policy: default-src 'none'; script-src 'self' https://static.cloudflareinsights.com; style-src 'self'; img-src 'self'; frame-src 'self'; connect-src https://cloudflareinsights.com; base-uri 'none'; form-action 'none'; frame-ancestors 'none'
   X-Content-Type-Options: nosniff
   Referrer-Policy: strict-origin-when-cross-origin
   Permissions-Policy: camera=(), microphone=(), geolocation=()
   Cross-Origin-Opener-Policy: same-origin
 
 # The demo export carries its own inline script and style and decodes its media into blob: URLs.
-# It may only be framed by this site.
+# It may only be framed by this site. no-transform keeps Cloudflare from adding the analytics beacon,
+# which the export's own CSP would block anyway.
 /demo/*
   ! Content-Security-Policy
   Content-Security-Policy: default-src 'none'; img-src blob:; media-src blob:; style-src 'unsafe-inline'; script-src 'unsafe-inline'; base-uri 'none'; form-action 'none'; frame-ancestors 'self'
+  Cache-Control: public, max-age=0, must-revalidate, no-transform
