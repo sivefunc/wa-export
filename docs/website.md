@@ -41,8 +41,12 @@ certificate. `site/_headers` sets the security headers.
    not the extension's dependencies. Node comes from `.nvmrc`.
 4. **Save and Deploy.** The first deploy attaches `wa-export.joan.engineer`; it can take a few minutes to
    get its certificate.
-5. Optional: **Settings → Build → Build watch paths**, include `site/*`, `scripts/site/*`, `docs/images/*`,
-   `docs/demo/*`, `assets/*` and `wrangler.jsonc`, so extension-only commits don't redeploy the site.
+5. Leave **Settings → Build → Build watch paths** at `*`. With narrower includes (`site/*`, `docs/images/*`, …)
+   a merge that changed `site/_headers` started no build at all (2026-11-15), so every push to `main` rebuilds
+   the site instead; a build takes well under a minute.
+
+`cf builds list --external-script-id <worker id>` shows the build history, and
+`cf builds create <trigger uuid> --body '{"branch":"main"}'` starts a build of `main` by hand.
 
 Don't run `wrangler deploy` by hand; push to `main`. Check a deploy with
 `npx wrangler@4.92.0 deploy --dry-run` after `pnpm site:build`.
