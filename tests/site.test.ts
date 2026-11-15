@@ -62,9 +62,10 @@ describe("website build", () => {
     expect([...doc.querySelectorAll("*")].flatMap((el) => [...el.attributes].filter((a) => a.name.startsWith("on")))).toEqual([]);
     const headers = read("_headers");
     const [page, demo] = headers.split("/demo/*") as [string, string];
-    // Cloudflare adds its Web Analytics beacon at the edge; the CSP lets exactly that script and its endpoint through.
+    // Cloudflare adds its Web Analytics beacon at the edge; the CSP lets exactly that script through, and it
+    // reports to this site's own /cdn-cgi/rum (seen live 2026-11-15), so connect-src is 'self'.
     expect(page).toMatch(
-      /Content-Security-Policy: default-src 'none'; script-src 'self' https:\/\/static\.cloudflareinsights\.com; style-src 'self'; img-src 'self'; frame-src 'self'; connect-src https:\/\/cloudflareinsights\.com;/,
+      /Content-Security-Policy: default-src 'none'; script-src 'self' https:\/\/static\.cloudflareinsights\.com; style-src 'self'; img-src 'self'; frame-src 'self'; connect-src 'self';/,
     );
     expect(page).not.toContain("unsafe-inline");
     // The demo is a real export with its own strict CSP; no-transform keeps Cloudflare from adding the beacon to it.

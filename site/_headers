@@ -1,7 +1,8 @@
 # Response headers, applied by Cloudflare Workers static assets. The page loads only its own files, plus
-# the Cloudflare Web Analytics beacon that Cloudflare adds at the edge (script and reporting endpoint).
+# the Cloudflare Web Analytics beacon that Cloudflare adds at the edge. The beacon reports to this
+# site's own /cdn-cgi/rum, so connect-src is 'self'.
 /*
-  Content-Security-Policy: default-src 'none'; script-src 'self' https://static.cloudflareinsights.com; style-src 'self'; img-src 'self'; frame-src 'self'; connect-src https://cloudflareinsights.com; base-uri 'none'; form-action 'none'; frame-ancestors 'none'
+  Content-Security-Policy: default-src 'none'; script-src 'self' https://static.cloudflareinsights.com; style-src 'self'; img-src 'self'; frame-src 'self'; connect-src 'self'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'
   X-Content-Type-Options: nosniff
   Referrer-Policy: strict-origin-when-cross-origin
   Permissions-Policy: camera=(), microphone=(), geolocation=()
